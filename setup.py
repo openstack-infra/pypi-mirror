@@ -61,6 +61,7 @@ setuptools.setup(
             'notify-impact=gerritx.cmd.notify_impact:main',
             'process-cache=gerritx.cmd.process_cache:main',
             'run-mirror=gerritx.cmd.run_mirror:main',
+            'trivial-rebase=gerritx.cmd.trivial_rebase:main',
             'update-blueprint=gerritx.cmd.update_blueprint:main',
             'update-bug=gerritx.cmd.update_bug:main',
         ],
