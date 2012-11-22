@@ -59,6 +59,7 @@ setuptools.setup(
             'fetch-remotes=gerritx.cmd.fetch_remotes:main',
             'manage-projects=gerritx.cmd.manage_projects:main',
             'notify-impact=gerritx.cmd.notify_impact:main',
+            'process-cache=gerritx.cmd.process_cache:main',
             'run-mirror=gerritx.cmd.run_mirror:main',
             'update-blueprint=gerritx.cmd.update_blueprint:main',
             'update-bug=gerritx.cmd.update_bug:main',
