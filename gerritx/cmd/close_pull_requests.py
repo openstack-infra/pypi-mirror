@@ -44,51 +44,59 @@ import os
 import yaml
 import logging
 
-logging.basicConfig(level=logging.ERROR)
-
-PROJECTS_YAML = os.environ.get('PROJECTS_YAML',
-                               '/home/gerrit2/projects.yaml')
-GITHUB_SECURE_CONFIG = os.environ.get('GITHUB_SECURE_CONFIG',
-                                      '/etc/github/github.secure.config')
-
 MESSAGE = """Thank you for contributing to OpenStack!
 
 %(project)s uses Gerrit for code review.
 
-Please visit http://wiki.openstack.org/GerritWorkflow and follow the instructions there to upload your change to Gerrit.
+Please visit http://wiki.openstack.org/GerritWorkflow and follow the
+instructions there to upload your change to Gerrit.
 """
 
-secure_config = ConfigParser.ConfigParser()
-secure_config.read(GITHUB_SECURE_CONFIG)
-(defaults, config) = [config for config in yaml.load_all(open(PROJECTS_YAML))]
 
-if secure_config.has_option("github", "oauth_token"):
-    ghub = github.Github(secure_config.get("github", "oauth_token"))
-else:
-    ghub = github.Github(secure_config.get("github", "username"),
-                         secure_config.get("github", "password"))
+def main():
 
-orgs = ghub.get_user().get_orgs()
-orgs_dict = dict(zip([o.login.lower() for o in orgs], orgs))
-for section in config:
-    project = section['project']
+    logging.basicConfig(level=logging.ERROR)
 
-    # Make sure we're supposed to close pull requests for this project:
-    if 'options' in section and 'has-pull-requests' in section['options']:
-        continue
+    PROJECTS_YAML = os.environ.get('PROJECTS_YAML',
+                                   '/home/gerrit2/projects.yaml')
+    GITHUB_SECURE_CONFIG = os.environ.get('GITHUB_SECURE_CONFIG',
+                                          '/etc/github/github.secure.config')
 
-    # Find the project's repo
-    project_split = project.split('/', 1)
-    if len(project_split) > 1:
-        repo = orgs_dict[project_split[0].lower()].get_repo(project_split[1])
+    secure_config = ConfigParser.ConfigParser()
+    secure_config.read(GITHUB_SECURE_CONFIG)
+    (defaults, config) = [config for config in
+                          yaml.load_all(open(PROJECTS_YAML))]
+
+    if secure_config.has_option("github", "oauth_token"):
+        ghub = github.Github(secure_config.get("github", "oauth_token"))
     else:
-        repo = ghub.get_user().get_repo(project)
+        ghub = github.Github(secure_config.get("github", "username"),
+                             secure_config.get("github", "password"))
 
-    # Close each pull request
-    pull_requests = repo.get_pulls("open")
-    for req in pull_requests:
-        vars = dict(project=project)
-        issue_data = {"url": repo.url + "/issues/" + str(req.number)}
-        issue = github.Issue.Issue(req._requester, issue_data, completed = True)
-        issue.create_comment(MESSAGE % vars)
-        req.edit(state = "closed")
+    orgs = ghub.get_user().get_orgs()
+    orgs_dict = dict(zip([o.login.lower() for o in orgs], orgs))
+    for section in config:
+        project = section['project']
+
+        # Make sure we're supposed to close pull requests for this project:
+        if 'options' in section and 'has-pull-requests' in section['options']:
+            continue
+
+        # Find the project's repo
+        project_split = project.split('/', 1)
+        if len(project_split) > 1:
+            org = orgs_dict[project_split[0].lower()]
+            repo = org.get_repo(project_split[1])
+        else:
+            repo = ghub.get_user().get_repo(project)
+
+        # Close each pull request
+        pull_requests = repo.get_pulls("open")
+        for req in pull_requests:
+            vars = dict(project=project)
+            issue_data = {"url": repo.url + "/issues/" + str(req.number)}
+            issue = github.Issue.Issue(req._requester,
+                                       issue_data,
+                                       completed=True)
+            issue.create_comment(MESSAGE % vars)
+            req.edit(state="closed")

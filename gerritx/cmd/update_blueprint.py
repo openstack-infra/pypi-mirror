@@ -29,34 +29,39 @@ import ConfigParser
 import MySQLdb
 
 BASE_DIR = '/home/gerrit2/review_site'
-GERRIT_CACHE_DIR = os.path.expanduser(os.environ.get('GERRIT_CACHE_DIR',
-                                '~/.launchpadlib/cache'))
-GERRIT_CREDENTIALS = os.path.expanduser(os.environ.get('GERRIT_CREDENTIALS',
-                                '~/.launchpadlib/creds'))
+GERRIT_CACHE_DIR = os.path.expanduser(
+    os.environ.get('GERRIT_CACHE_DIR',
+                   '~/.launchpadlib/cache'))
+GERRIT_CREDENTIALS = os.path.expanduser(
+    os.environ.get('GERRIT_CREDENTIALS',
+                   '~/.launchpadlib/creds'))
 GERRIT_CONFIG = os.environ.get('GERRIT_CONFIG',
-                                 '/home/gerrit2/review_site/etc/gerrit.config')
+                               '/home/gerrit2/review_site/etc/gerrit.config')
+GERRIT_SECURE_CONFIG_DEFAULT = '/home/gerrit2/review_site/etc/secure.config'
 GERRIT_SECURE_CONFIG = os.environ.get('GERRIT_SECURE_CONFIG',
-                                 '/home/gerrit2/review_site/etc/secure.config')
+                                      GERRIT_SECURE_CONFIG_DEFAULT)
 SPEC_RE = re.compile(r'(blueprint|bp)\s*[#:]?\s*(\S+)', re.I)
 BODY_RE = re.compile(r'^\s+.*$')
+
 
 def get_broken_config(filename):
     """ gerrit config ini files are broken and have leading tabs """
     text = ""
-    with open(filename,"r") as conf:
+    with open(filename, "r") as conf:
         for line in conf.readlines():
             text = "%s%s" % (text, line.lstrip())
 
     fp = StringIO.StringIO(text)
-    c=ConfigParser.ConfigParser()
+    c = ConfigParser.ConfigParser()
     c.readfp(fp)
     return c
 
 GERRIT_CONFIG = get_broken_config(GERRIT_CONFIG)
 SECURE_CONFIG = get_broken_config(GERRIT_SECURE_CONFIG)
 DB_USER = GERRIT_CONFIG.get("database", "username")
-DB_PASS = SECURE_CONFIG.get("database","password")
-DB_DB = GERRIT_CONFIG.get("database","database")
+DB_PASS = SECURE_CONFIG.get("database", "password")
+DB_DB = GERRIT_CONFIG.get("database", "database")
+
 
 def update_spec(launchpad, project, name, subject, link, topic=None):
     # For testing, if a project doesn't match openstack/foo, use
@@ -66,7 +71,8 @@ def update_spec(launchpad, project, name, subject, link, topic=None):
         project = 'openstack-ci'
 
     spec = launchpad.projects[project].getSpecification(name=name)
-    if not spec: return
+    if not spec:
+        return
 
     if spec.whiteboard:
         wb = spec.whiteboard.strip()
@@ -74,30 +80,34 @@ def update_spec(launchpad, project, name, subject, link, topic=None):
         wb = ''
     changed = False
     if topic:
-        topiclink = '%s/#q,topic:%s,n,z' % (link[:link.find('/',8)],
+        topiclink = '%s/#q,topic:%s,n,z' % (link[:link.find('/', 8)],
                                             topic)
         if topiclink not in wb:
             wb += "\n\n\nGerrit topic: %(link)s" % dict(link=topiclink)
             changed = True
 
     if link not in wb:
-        wb += "\n\n\nAddressed by: %(link)s\n    %(subject)s\n" % dict(subject=subject,
-                                                                      link=link)
+        wb += ("\n\n\nAddressed by: {link}\n"
+               "    {subject}\n").format(subject=subject,
+                                         link=link)
         changed = True
 
     if changed:
         spec.whiteboard = wb
         spec.lp_save()
 
+
 def find_specs(launchpad, dbconn, args):
-    git_log = subprocess.Popen(['git',
-                                '--git-dir=' + BASE_DIR + '/git/' + args.project + '.git',
-                                'log', '--no-merges',
+    git_dir_arg = '--git-dir={base_dir}/git/{project}.git'.format(
+        base_dir=BASE_DIR,
+        project=args.project)
+    git_log = subprocess.Popen(['git', git_dir_arg, 'log', '--no-merges',
                                 args.commit + '^1..' + args.commit],
                                stdout=subprocess.PIPE).communicate()[0]
 
     cur = dbconn.cursor()
-    cur.execute("select subject, topic from changes where change_key=%s", args.change)
+    cur.execute("select subject, topic from changes where change_key=%s",
+                args.change)
     subject, topic = cur.fetchone()
     specs = set([m.group(2) for m in SPEC_RE.finditer(git_log)])
 
@@ -108,6 +118,7 @@ def find_specs(launchpad, dbconn, args):
     for spec in specs:
         update_spec(launchpad, args.project, spec, subject,
                     args.change_url, topic)
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -128,12 +139,9 @@ def main():
 
     launchpad = Launchpad.login_with('Gerrit User Sync', LPNET_SERVICE_ROOT,
                                      GERRIT_CACHE_DIR,
-                                     credentials_file = GERRIT_CREDENTIALS,
+                                     credentials_file=GERRIT_CREDENTIALS,
                                      version='devel')
 
-    conn = MySQLdb.connect(user = DB_USER, passwd = DB_PASS, db = DB_DB)
+    conn = MySQLdb.connect(user=DB_USER, passwd=DB_PASS, db=DB_DB)
 
     find_specs(launchpad, conn, args)
-
-if __name__ == '__main__':
-    main()

@@ -26,10 +26,12 @@ import subprocess
 
 
 BASE_DIR = '/home/gerrit2/review_site'
-GERRIT_CACHE_DIR = os.path.expanduser(os.environ.get('GERRIT_CACHE_DIR',
-                                '~/.launchpadlib/cache'))
-GERRIT_CREDENTIALS = os.path.expanduser(os.environ.get('GERRIT_CREDENTIALS',
-                                '~/.launchpadlib/creds'))
+GERRIT_CACHE_DIR = os.path.expanduser(
+    os.environ.get('GERRIT_CACHE_DIR',
+                   '~/.launchpadlib/cache'))
+GERRIT_CREDENTIALS = os.path.expanduser(
+    os.environ.get('GERRIT_CREDENTIALS',
+                   '~/.launchpadlib/creds'))
 
 
 def add_change_proposed_message(bugtask, change_url, project, branch):
@@ -112,7 +114,7 @@ def git2lp(full_project_name):
         'openstack-ci/gerrit': 'openstack-ci',
         'openstack-ci/lodgeit': 'openstack-ci',
         'openstack-ci/meetbot': 'openstack-ci',
-        }
+    }
     return project_map.get(full_project_name, short_project(full_project_name))
 
 
@@ -127,7 +129,7 @@ def is_direct_release(full_project_name):
         'openstack/openstack-ci-puppet',
         'openstack/openstack-manuals',
         'openstack/tempest',
-        ]
+    ]
 
 
 def process_bugtask(launchpad, bugtask, git_log, args):
@@ -147,7 +149,7 @@ def process_bugtask(launchpad, bugtask, git_log, args):
             # Look for a related task matching the series
             for reltask in bugtask.related_tasks:
                 if (reltask.bug_target_name.endswith("/" + series) and
-                    reltask.status != u'Fix Released'):
+                        reltask.status != u'Fix Released'):
                     # Use fixcommitted if there is any
                     set_fix_committed(reltask)
                     break
@@ -168,7 +170,8 @@ def process_bugtask(launchpad, bugtask, git_log, args):
             series = args.branch[7:]
             for reltask in bugtask.related_tasks:
                 if (reltask.bug_target_name.endswith("/" + series) and
-                    reltask.status not in [u'Fix Committed', u'Fix Released']):
+                        reltask.status not in [u'Fix Committed',
+                                               u'Fix Released']):
                     set_in_progress(reltask, launchpad,
                                     args.uploader, args.change_url)
                     break
@@ -238,7 +241,3 @@ def main():
     # Process bugtasks found in git log
     for bugtask in find_bugs(launchpad, git_log, args):
         process_bugtask(launchpad, bugtask, git_log, args)
-
-
-if __name__ == '__main__':
-    main()

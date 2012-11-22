@@ -34,6 +34,7 @@ Log:
 %s
 """
 
+
 def process_impact(git_log, args):
     """Notify mail list of impact"""
     email_content = EMAIL_TEMPLATE % (args.impact, args.change_url, git_log)
@@ -48,9 +49,11 @@ def process_impact(git_log, args):
                args.dest_address, msg.as_string())
     s.quit()
 
+
 def impacted(git_log, impact_string):
     """Determine if a changes log indicates there is an impact"""
     return re.search(impact_string, git_log, re.IGNORECASE)
+
 
 def extract_git_log(args):
     """Extract git log of all merged commits"""
@@ -86,7 +89,3 @@ def main():
     # Process impacts found in git log
     if impacted(git_log, args.impact):
         process_impact(git_log, args)
-
-
-if __name__ == '__main__':
-    main()

@@ -1,0 +1,8 @@
+.tox
+build/*
+*.pyc
+gerritx/versioninfo
+AUTHORS
+ChangeLog
+dist/*
+*.egg-info

@@ -24,6 +24,7 @@ import subprocess
 import shlex
 import yaml
 
+
 def run_command(cmd, status=False, env={}):
     cmd_list = shlex.split(str(cmd))
     newenv = os.environ
@@ -40,42 +41,45 @@ def run_command_status(cmd, env={}):
     return run_command(cmd, True, env)
 
 
-logging.basicConfig(level=logging.ERROR)
+def main():
 
-PROJECTS_YAML = os.environ.get('PROJECTS_YAML',
-                               '/etc/openstackci/projects.yaml')
-PIP_TEMP_DOWNLOAD = os.environ.get('PIP_TEMP_DOWNLOAD',
-                                   '/var/lib/pip-download')
-GIT_SOURCE = os.environ.get('GIT_SOURCE', 'https://github.com')
-pip_command = '/usr/local/bin/pip install -M -U -I --exists-action=w ' \
-              '--no-install %s'
+    logging.basicConfig(level=logging.ERROR)
 
-run_command(pip_command % "pip")
+    PROJECTS_YAML = os.environ.get('PROJECTS_YAML',
+                                   '/etc/openstackci/projects.yaml')
+    PIP_TEMP_DOWNLOAD = os.environ.get('PIP_TEMP_DOWNLOAD',
+                                       '/var/lib/pip-download')
+    GIT_SOURCE = os.environ.get('GIT_SOURCE', 'https://github.com')
+    pip_command = '/usr/local/bin/pip install -M -U -I --exists-action=w ' \
+                  '--no-install %s'
 
-(defaults, config) = [config for config in yaml.load_all(open(PROJECTS_YAML))]
+    run_command(pip_command % "pip")
 
-for section in config:
-    project = section['project']
+    (defaults, config) = [config for config in
+                          yaml.load_all(open(PROJECTS_YAML))]
 
-    os.chdir(PIP_TEMP_DOWNLOAD)
-    short_project = project.split('/')[1]
-    if not os.path.isdir(short_project):
-        run_command("git clone %s/%s.git %s" % (GIT_SOURCE, project,
-                                                short_project))
-    os.chdir(short_project)
-    run_command("git fetch origin")
+    for section in config:
+        project = section['project']
 
-    for branch in run_command("git branch -a").split("\n"):
-        branch = branch.strip()
-        if (not branch.startswith("remotes/origin")
-            or "origin/HEAD" in branch):
-            continue
-        run_command("git reset --hard %s" % branch)
-        run_command("git clean -x -f -d -q")
-        print("*********************")
-        print("Fetching pip requires for %s:%s" % (project, branch))
-        for requires_file in ("tools/pip-requires", "tools/test-requires"):
-            if os.path.exists(requires_file):
-                stanza = "-r %s" % requires_file
-                run_command(pip_command % stanza)
+        os.chdir(PIP_TEMP_DOWNLOAD)
+        short_project = project.split('/')[1]
+        if not os.path.isdir(short_project):
+            run_command("git clone %s/%s.git %s" % (GIT_SOURCE, project,
+                                                    short_project))
+        os.chdir(short_project)
+        run_command("git fetch origin")
 
+        for branch in run_command("git branch -a").split("\n"):
+            branch = branch.strip()
+            if (not branch.startswith("remotes/origin")
+                    or "origin/HEAD" in branch):
+                continue
+            run_command("git reset --hard %s" % branch)
+            run_command("git clean -x -f -d -q")
+            print("*********************")
+            print("Fetching pip requires for %s:%s" % (project, branch))
+            for requires_file in ("tools/pip-requires",
+                                  "tools/test-requires"):
+                if os.path.exists(requires_file):
+                    stanza = "-r %s" % requires_file
+                    run_command(pip_command % stanza)

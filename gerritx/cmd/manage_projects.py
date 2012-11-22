@@ -50,7 +50,6 @@ import yaml
 import github
 import gerritlib.gerrit
 
-
 logging.basicConfig(level=logging.ERROR)
 log = logging.getLogger("manage_projects")
 
@@ -113,7 +112,7 @@ def copy_acl_config(project, repo_path, acl_config):
     status, _ = run_command("cp %s %s" %
                             (acl_config, acl_dest), status=True)
     if status == 0:
-        status = git_command(repo_path, "diff --quiet HEAD")
+        status = git_command(repo_path, "diff-index --quiet HEAD --")
         if status != 0:
             return True
     return False
@@ -121,14 +120,14 @@ def copy_acl_config(project, repo_path, acl_config):
 
 def push_acl_config(project, remote_url, repo_path, env={}):
     cmd = "commit -a -m'Update project config.' --author='Openstack Project " \
-            "Creator <openstack-infra@lists.openstack.org>'"
+          "Creator <openstack-infra@lists.openstack.org>'"
     status = git_command(repo_path, cmd)
     if status != 0:
         print "Failed to commit config for project: %s" % project
         return False
     status, out = git_command_output(repo_path,
-                         "push %s HEAD:refs/meta/config" %
-                         remote_url, env)
+                                     "push %s HEAD:refs/meta/config" %
+                                     remote_url, env)
     if status != 0:
         print "Failed to push config for project: %s" % project
         print out
@@ -194,134 +193,147 @@ def make_ssh_wrapper(gerrit_user, gerrit_key):
     return dict(GIT_SSH=name)
 
 
-PROJECTS_YAML = os.environ.get('PROJECTS_YAML',
-                               '/home/gerrit2/projects.yaml')
-configs = [config for config in yaml.load_all(open(PROJECTS_YAML))]
-defaults = configs[0][0]
-default_has_issues = defaults.get('has-issues', False)
-default_has_downloads = defaults.get('has-downloads', False)
-default_has_wiki = defaults.get('has-wiki', False)
+def main():
 
-LOCAL_GIT_DIR = defaults.get('local-git-dir', '/var/lib/git')
-GERRIT_HOST = defaults.get('gerrit-host')
-GERRIT_USER = defaults.get('gerrit-user')
-GERRIT_KEY = defaults.get('gerrit-key')
-GITHUB_SECURE_CONFIG = defaults.get('github-config',
-                               '/etc/github/github-projects.secure.config')
+    PROJECTS_YAML = os.environ.get('PROJECTS_YAML',
+                                   '/home/gerrit2/projects.yaml')
+    configs = [config for config in yaml.load_all(open(PROJECTS_YAML))]
+    defaults = configs[0][0]
+    default_has_issues = defaults.get('has-issues', False)
+    default_has_downloads = defaults.get('has-downloads', False)
+    default_has_wiki = defaults.get('has-wiki', False)
 
-secure_config = ConfigParser.ConfigParser()
-secure_config.read(GITHUB_SECURE_CONFIG)
+    LOCAL_GIT_DIR = defaults.get('local-git-dir', '/var/lib/git')
+    GERRIT_HOST = defaults.get('gerrit-host')
+    GERRIT_USER = defaults.get('gerrit-user')
+    GERRIT_KEY = defaults.get('gerrit-key')
 
-# Project creation doesn't work via oauth
-ghub = github.Github(secure_config.get("github", "username"),
-                     secure_config.get("github", "password"))
-orgs = ghub.get_user().get_orgs()
-orgs_dict = dict(zip([o.login.lower() for o in orgs], orgs))
+    GITHUB_SECURE_CONFIG = defaults.get(
+        'github-config',
+        '/etc/github/github-projects.secure.config')
 
-gerrit = gerritlib.gerrit.Gerrit('localhost',
-                                 GERRIT_USER,
-                                 29418,
-                                 GERRIT_KEY)
-project_list = gerrit.listProjects()
-ssh_env = make_ssh_wrapper(GERRIT_USER, GERRIT_KEY)
-try:
+    secure_config = ConfigParser.ConfigParser()
+    secure_config.read(GITHUB_SECURE_CONFIG)
 
-    for section in configs[1]:
-        project = section['project']
-        options = section.get('options', dict())
-        description = section.get('description', None)
-        homepage = section.get('homepage', defaults.get('homepage', None))
-        upstream = section.get('upstream', None)
+    # Project creation doesn't work via oauth
+    ghub = github.Github(secure_config.get("github", "username"),
+                         secure_config.get("github", "password"))
+    orgs = ghub.get_user().get_orgs()
+    orgs_dict = dict(zip([o.login.lower() for o in orgs], orgs))
 
-        project_git = "%s.git" % project
-        project_dir = os.path.join(LOCAL_GIT_DIR, project_git)
+    gerrit = gerritlib.gerrit.Gerrit('localhost',
+                                     GERRIT_USER,
+                                     29418,
+                                     GERRIT_KEY)
+    project_list = gerrit.listProjects()
+    ssh_env = make_ssh_wrapper(GERRIT_USER, GERRIT_KEY)
+    try:
 
-        # Find the project's repo
-        project_split = project.split('/', 1)
-        if len(project_split) > 1:
-            repo_name = project_split[1]
-        else:
-            repo_name = project
-        has_issues = 'has-issues' in options or default_has_issues
-        has_downloads = 'has-downloads' in options or default_has_downloads
-        has_wiki = 'has-wiki' in options or default_has_wiki
-        try:
-            org = orgs_dict[project_split[0].lower()]
-        except KeyError:
-            # We do not have control of this github org ignore the project.
-            continue
-        try:
-            repo = org.get_repo(repo_name)
-        except github.GithubException:
-            repo = org.create_repo(repo_name,
-                                   homepage=homepage,
-                                   has_issues=has_issues,
-                                   has_downloads=has_downloads,
-                                   has_wiki=has_wiki)
-        if description:
-            repo.edit(repo_name, description=description)
-        if homepage:
-            repo.edit(repo_name, homepage=homepage)
+        for section in configs[1]:
+            project = section['project']
+            options = section.get('options', dict())
+            description = section.get('description', None)
+            homepage = section.get('homepage', defaults.get('homepage', None))
+            upstream = section.get('upstream', None)
 
-        repo.edit(repo_name, has_issues=has_issues,
-                  has_downloads=has_downloads,
-                  has_wiki=has_wiki)
+            project_git = "%s.git" % project
+            project_dir = os.path.join(LOCAL_GIT_DIR, project_git)
 
-        if 'gerrit' not in [team.name for team in repo.get_teams()]:
-            teams = org.get_teams()
-            teams_dict = dict(zip([t.name.lower() for t in teams], teams))
-            teams_dict['gerrit'].add_to_repos(repo)
-
-        remote_url = "ssh://localhost:29418/%s" % project
-        if project not in project_list:
-            tmpdir = tempfile.mkdtemp()
+            # Find the project's repo
+            project_split = project.split('/', 1)
+            if len(project_split) > 1:
+                repo_name = project_split[1]
+            else:
+                repo_name = project
+            has_issues = 'has-issues' in options or default_has_issues
+            has_downloads = 'has-downloads' in options or default_has_downloads
+            has_wiki = 'has-wiki' in options or default_has_wiki
             try:
-                repo_path = os.path.join(tmpdir, 'repo')
-                if upstream:
-                    run_command("git clone %(upstream)s %(repo_path)s" %
-                                dict(upstream=upstream, repo_path=repo_path))
-                else:
-                    run_command("git init %s" % repo_path)
-                    with open(os.path.join(repo_path,
-                                           ".gitreview"), 'w') as gitreview:
-                        gitreview.write("""
-[gerrit]
-host=%s
-port=29418
-project=%s
-""" % (GERRIT_HOST, project_git))
-                    git_command(repo_path, "add .gitreview")
-                    cmd = "commit -a -m'Added .gitreview' --author=" \
-                            "'Openstack Project Creator " \
-                            "<openstack-infra@lists.openstack.org>'"
-                    git_command(repo_path, cmd)
-                gerrit.createProject(project)
-
-                if not os.path.exists(project_dir):
-                    run_command("git --bare init %s" % project_dir)
-                    run_command("chown -R gerrit2:gerrit2 %s" % project_dir)
-
-                git_command(repo_path,
-                            "push --all %s" % remote_url,
-                            env=ssh_env)
-                git_command(repo_path,
-                            "push --tags %s" % remote_url, env=ssh_env)
-            finally:
-                run_command("rm -fr %s" % tmpdir)
-
-        if 'acl_config' in section:
-            tmpdir = tempfile.mkdtemp()
+                org = orgs_dict[project_split[0].lower()]
+            except KeyError:
+                # We do not have control of this github org ignore the project.
+                continue
             try:
-                repo_path = os.path.join(tmpdir, 'repo')
-                ret, _ = run_command_status("git init %s" % repo_path)
-                if ret != 0:
-                    continue
-                if (fetch_config(project, remote_url, repo_path, ssh_env) and
-                    copy_acl_config(project, repo_path,
-                                    section['acl_config']) and
-                    create_groups_file(project, gerrit, repo_path)):
-                    push_acl_config(project, remote_url, repo_path, ssh_env)
-            finally:
-                run_command("rm -fr %s" % tmpdir)
-finally:
-    os.unlink(ssh_env['GIT_SSH'])
+                repo = org.get_repo(repo_name)
+            except github.GithubException:
+                repo = org.create_repo(repo_name,
+                                       homepage=homepage,
+                                       has_issues=has_issues,
+                                       has_downloads=has_downloads,
+                                       has_wiki=has_wiki)
+            if description:
+                repo.edit(repo_name, description=description)
+            if homepage:
+                repo.edit(repo_name, homepage=homepage)
+
+            repo.edit(repo_name, has_issues=has_issues,
+                      has_downloads=has_downloads,
+                      has_wiki=has_wiki)
+
+            if 'gerrit' not in [team.name for team in repo.get_teams()]:
+                teams = org.get_teams()
+                teams_dict = dict(zip([t.name.lower() for t in teams], teams))
+                teams_dict['gerrit'].add_to_repos(repo)
+
+            remote_url = "ssh://localhost:29418/%s" % project
+            if project not in project_list:
+                tmpdir = tempfile.mkdtemp()
+                try:
+                    repo_path = os.path.join(tmpdir, 'repo')
+                    if upstream:
+                        run_command("git clone %(upstream)s %(repo_path)s" %
+                                    dict(upstream=upstream,
+                                         repo_path=repo_path))
+                    else:
+                        run_command("git init %s" % repo_path)
+                        with open(os.path.join(repo_path,
+                                               ".gitreview"),
+                                  'w') as gitreview:
+                            gitreview.write("""
+    [gerrit]
+    host=%s
+    port=29418
+    project=%s
+    """ % (GERRIT_HOST, project_git))
+                        git_command(repo_path, "add .gitreview")
+                        cmd = "commit -a -m'Added .gitreview' --author=" \
+                              "'Openstack Project Creator " \
+                              "<openstack-infra@lists.openstack.org>'"
+                        git_command(repo_path, cmd)
+                    gerrit.createProject(project)
+
+                    if not os.path.exists(project_dir):
+                        run_command("git --bare init %s" % project_dir)
+                        run_command("chown -R gerrit2:gerrit2 %s"
+                                    % project_dir)
+
+                    git_command(repo_path,
+                                "push --all %s" % remote_url,
+                                env=ssh_env)
+                    git_command(repo_path,
+                                "push --tags %s" % remote_url, env=ssh_env)
+                finally:
+                    run_command("rm -fr %s" % tmpdir)
+
+            if 'acl_config' in section:
+                tmpdir = tempfile.mkdtemp()
+                try:
+                    repo_path = os.path.join(tmpdir, 'repo')
+                    ret, _ = run_command_status("git init %s" % repo_path)
+                    if ret != 0:
+                        continue
+                    if (fetch_config(project,
+                                     remote_url,
+                                     repo_path,
+                                     ssh_env) and
+                        copy_acl_config(project, repo_path,
+                                        section['acl_config']) and
+                            create_groups_file(project, gerrit, repo_path)):
+                        push_acl_config(project,
+                                        remote_url,
+                                        repo_path,
+                                        ssh_env)
+                finally:
+                    run_command("rm -fr %s" % tmpdir)
+    finally:
+        os.unlink(ssh_env['GIT_SSH'])

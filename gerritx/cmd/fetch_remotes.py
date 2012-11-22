@@ -33,6 +33,7 @@ import subprocess
 import shlex
 import yaml
 
+
 def run_command(cmd, status=False, env={}):
     cmd_list = shlex.split(str(cmd))
     newenv = os.environ
@@ -49,28 +50,30 @@ def run_command_status(cmd, env={}):
     return run_command(cmd, True, env)
 
 
-logging.basicConfig(level=logging.ERROR)
+def main():
+    logging.basicConfig(level=logging.ERROR)
 
-REPO_ROOT = os.environ.get('REPO_ROOT',
-                           '/home/gerrit2/review_site/git')
-PROJECTS_YAML = os.environ.get('PROJECTS_YAML',
-                               '/home/gerrit2/projects.yaml')
+    REPO_ROOT = os.environ.get('REPO_ROOT',
+                               '/home/gerrit2/review_site/git')
+    PROJECTS_YAML = os.environ.get('PROJECTS_YAML',
+                                   '/home/gerrit2/projects.yaml')
 
-(defaults, config) = [config for config in yaml.load_all(open(PROJECTS_YAML))]
+    (defaults, config) = [config for config in
+                          yaml.load_all(open(PROJECTS_YAML))]
 
-for section in config:
-    project = section['project']
+    for section in config:
+        project = section['project']
 
-    if 'remote' not in section:
-        continue
+        if 'remote' not in section:
+            continue
 
-    project_git = "%s.git" % project
-    os.chdir(os.path.join(REPO_ROOT, project_git))
+        project_git = "%s.git" % project
+        os.chdir(os.path.join(REPO_ROOT, project_git))
 
-    # Make sure that the specified remote exists
-    remote_url = section['remote']
-    # We could check if it exists first, but we're ignoring output anyway
-    # So just try to make it, and it'll either make a new one or do nothing
-    run_command("git remote add -f upstream %s" % remote_url)
-    # Fetch new revs from it
-    run_command("git remote update upstream")
+        # Make sure that the specified remote exists
+        remote_url = section['remote']
+        # We could check if it exists first, but we're ignoring output anyway
+        # So just try to make it, and it'll either make a new one or do nothing
+        run_command("git remote add -f upstream %s" % remote_url)
+        # Fetch new revs from it
+        run_command("git remote update upstream")
