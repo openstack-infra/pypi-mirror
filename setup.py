@@ -16,8 +16,8 @@ import os
 import setuptools
 
 
-from gerritx.openstack.common import setup
-from gerritx.version import version_info as version
+from jeepyb.openstack.common import setup
+from jeepyb.version import version_info as version
 
 requires = setup.parse_requirements()
 tests_require = setup.parse_requirements(['tools/test-requires'])
@@ -29,13 +29,13 @@ def read_file(file_name):
 
 
 setuptools.setup(
-    name="gerritx",
+    name="jeepyb",
     version=version.canonical_version_string(always=True),
     author='Hewlett-Packard Development Company, L.P.',
     author_email='openstack@lists.launchpad.net',
     description="Tools for managing gerrit projects and external sources.",
     license="Apache License, Version 2.0",
-    url="https://github.com/openstack-ci/gerritx",
+    url="https://github.com/openstack-ci/jeepyb",
     packages=setuptools.find_packages(exclude=['tests', 'tests.*']),
     include_package_data=True,
     setup_requires=['setuptools_git>=0.4'],
@@ -54,16 +54,16 @@ setuptools.setup(
     ],
     entry_points={
         'console_scripts': [
-            'close-pull-requests=gerritx.cmd.close_pull_requests:main',
-            'expire-old-reviews=gerritx.cmd.expire_old_reviews:main',
-            'fetch-remotes=gerritx.cmd.fetch_remotes:main',
-            'manage-projects=gerritx.cmd.manage_projects:main',
-            'notify-impact=gerritx.cmd.notify_impact:main',
-            'process-cache=gerritx.cmd.process_cache:main',
-            'run-mirror=gerritx.cmd.run_mirror:main',
-            'trivial-rebase=gerritx.cmd.trivial_rebase:main',
-            'update-blueprint=gerritx.cmd.update_blueprint:main',
-            'update-bug=gerritx.cmd.update_bug:main',
+            'close-pull-requests=jeepyb.cmd.close_pull_requests:main',
+            'expire-old-reviews=jeepyb.cmd.expire_old_reviews:main',
+            'fetch-remotes=jeepyb.cmd.fetch_remotes:main',
+            'manage-projects=jeepyb.cmd.manage_projects:main',
+            'notify-impact=jeepyb.cmd.notify_impact:main',
+            'process-cache=jeepyb.cmd.process_cache:main',
+            'run-mirror=jeepyb.cmd.run_mirror:main',
+            'trivial-rebase=jeepyb.cmd.trivial_rebase:main',
+            'update-blueprint=jeepyb.cmd.update_blueprint:main',
+            'update-bug=jeepyb.cmd.update_bug:main',
         ],
     }
 )

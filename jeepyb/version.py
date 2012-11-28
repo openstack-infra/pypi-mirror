@@ -15,6 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from gerritx.openstack.common import version as common_version
+from jeepyb.openstack.common import version as common_version
 
-version_info = common_version.VersionInfo('gerritx')
+version_info = common_version.VersionInfo('jeepyb')

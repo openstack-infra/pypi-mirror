@@ -1,4 +1,4 @@
-include gerritx/versioninfo
+include jeepyb/versioninfo
 include AUTHORS
 include ChangeLog
 

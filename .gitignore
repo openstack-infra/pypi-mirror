@@ -1,7 +1,7 @@
 .tox
 build/*
 *.pyc
-gerritx/versioninfo
+jeepyb/versioninfo
 AUTHORS
 ChangeLog
 dist/*
