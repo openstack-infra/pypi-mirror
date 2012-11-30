@@ -284,6 +284,11 @@ def main():
                         run_command("git clone %(upstream)s %(repo_path)s" %
                                     dict(upstream=upstream,
                                          repo_path=repo_path))
+                        git_command(repo_path,
+                                    "fetch origin "
+                                    "+refs/heads/*:refs/copy/heads/*",
+                                    env=ssh_env)
+                        push_string = "push %s +refs/copy/heads/*:refs/heads/*"
                     else:
                         run_command("git init %s" % repo_path)
                         with open(os.path.join(repo_path,
@@ -300,6 +305,7 @@ def main():
                               "'Openstack Project Creator " \
                               "<openstack-infra@lists.openstack.org>'"
                         git_command(repo_path, cmd)
+                        push_string = "push --all %s"
                     gerrit.createProject(project)
 
                     if not os.path.exists(project_dir):
@@ -308,7 +314,7 @@ def main():
                                     % project_dir)
 
                     git_command(repo_path,
-                                "push --all %s" % remote_url,
+                                push_string % remote_url,
                                 env=ssh_env)
                     git_command(repo_path,
                                 "push --tags %s" % remote_url, env=ssh_env)
