@@ -189,7 +189,7 @@ def make_ssh_wrapper(gerrit_user, gerrit_key):
              'ssh -i %s -l %s -o "StrictHostKeyChecking no" $@\n' %
              (gerrit_key, gerrit_user))
     os.close(fd)
-    os.chmod(name, 755)
+    os.chmod(name, 0755)
     return dict(GIT_SSH=name)
 
 
