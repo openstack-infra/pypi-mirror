@@ -149,7 +149,7 @@ def get_group_uuid(gerrit, group):
     uuid = _get_group_uuid(gerrit, group)
     if uuid:
         return uuid
-    gerrit.createGroup(group)
+    gerrit.createGroup(group, owner="Administrators")
     uuid = _get_group_uuid(gerrit, group)
     if uuid:
         return uuid
