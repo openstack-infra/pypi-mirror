@@ -115,6 +115,7 @@ def git2lp(full_project_name):
         'openstack-ci/lodgeit': 'openstack-ci',
         'openstack-ci/meetbot': 'openstack-ci',
         'openstack-ci/jeepyb': 'openstack-ci',
+        'openstack/api-site': 'openstack-api-site',
         'openstack/oslo-incubator': 'oslo',
     }
     return project_map.get(full_project_name, short_project(full_project_name))
@@ -131,6 +132,7 @@ def is_direct_release(full_project_name):
         'openstack/openstack-ci-puppet',
         'openstack-ci/jeepyb',
         'openstack/openstack-manuals',
+        'openstack/api-site',
         'openstack/tempest',
     ]
 
