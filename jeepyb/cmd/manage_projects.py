@@ -50,6 +50,8 @@ import yaml
 import github
 import gerritlib.gerrit
 
+import jeepyb.gerritdb
+
 logging.basicConfig(level=logging.ERROR)
 log = logging.getLogger("manage_projects")
 
@@ -136,12 +138,12 @@ def push_acl_config(project, remote_url, repo_path, env={}):
 
 
 def _get_group_uuid(gerrit, group):
-    query = "select group_uuid from account_groups where name = '%s'" % group
-    data = gerrit.dbQuery(query)
+    cursor = jeepyb.gerritdb.connect().cursor()
+    query = "SELECT group_uuid FROM account_groups WHERE name = %s"
+    cursor.execute(query, group)
+    data = cursor.fetchone()
     if data:
-        for row in data:
-            if row["type"] == "row":
-                return row["columns"]["group_uuid"]
+        return data[0]
     return None
 
 
