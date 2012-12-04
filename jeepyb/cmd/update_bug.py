@@ -19,6 +19,7 @@
 
 from launchpadlib.launchpad import Launchpad
 from launchpadlib.uris import LPNET_SERVICE_ROOT
+import jeepyb.gerritdb
 import os
 import argparse
 import re
@@ -55,15 +56,41 @@ Branch:    %s\n''' % (change_url, git_url, submitter, branch)
 def set_in_progress(bugtask, launchpad, uploader, change_url):
     """Set bug In progress with assignee being the uploader"""
 
-    # Retrieve uploader from Launchpad. Use email as search key if
-    # provided, and only set if there is a clear match.
+    # Retrieve uploader from Launchpad by correlating Gerrit E-mail
+    # address to OpenID, and only set if there is a clear match.
     try:
         searchkey = uploader[uploader.rindex("(") + 1:-1]
     except ValueError:
         searchkey = uploader
-    persons = launchpad.people.findPerson(text=searchkey)
-    if len(persons) == 1:
-        bugtask.assignee = persons[0]
+
+    # The counterintuitive query is due to odd database schema choices
+    # in Gerrit. For example, an account with a secondary E-mail
+    # address added looks like...
+    # select email_address,external_id from account_external_ids
+    #     where account_id=1234;
+    # +-----------------+-----------------------------------------+
+    # | email_address   | external_id                             |
+    # +-----------------+-----------------------------------------+
+    # | plugh@xyzzy.com | https://login.launchpad.net/+id/fR0bnU1 |
+    # | bar@foo.org     | mailto:bar@foo.org                      |
+    # | NULL            | username:quux                           |
+    # +-----------------+-----------------------------------------+
+    # ...thus we need a join on a secondary query to search against
+    # all the user's configured E-mail addresses.
+    #
+    query = """SELECT t.external_id FROM account_external_ids t
+            INNER JOIN (
+                SELECT t.account_id FROM account_external_ids t
+                WHERE t.email_address = %s )
+            original ON t.account_id = original.account_id
+            AND t.external_id LIKE 'https://%%'"""
+
+    cursor = jeepyb.gerritdb.connect().cursor()
+    cursor.execute(query, searchkey)
+    data = cursor.fetchone()
+    if data:
+        bugtask.assignee = launchpad.people.getByOpenIDIdentifier(
+            identifier=data[0])
 
     bugtask.status = "In Progress"
     bugtask.lp_save()
