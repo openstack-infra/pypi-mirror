@@ -40,7 +40,7 @@ GERRIT_CONFIG = os.environ.get('GERRIT_CONFIG',
 GERRIT_SECURE_CONFIG_DEFAULT = '/home/gerrit2/review_site/etc/secure.config'
 GERRIT_SECURE_CONFIG = os.environ.get('GERRIT_SECURE_CONFIG',
                                       GERRIT_SECURE_CONFIG_DEFAULT)
-SPEC_RE = re.compile(r'(blueprint|bp)\s*[#:]?\s*(\S+)', re.I)
+SPEC_RE = re.compile(r'\b(blueprint|bp)\b[ \t]*[#:]?[ \t]*(\S+)', re.I)
 BODY_RE = re.compile(r'^\s+.*$')
 
 
