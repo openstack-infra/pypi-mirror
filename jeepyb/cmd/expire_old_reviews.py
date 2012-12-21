@@ -37,7 +37,7 @@ def expire_patch_set(ssh, patch_id, patch_subject, has_negative):
         message = ('code review expired after 2 weeks of no activity,'
                    ' it can be restored using the \`Restore Change\` button '
                    ' under the Patch Set on the web interface')
-    command = ('gerrit review --abandon'
+    command = ('gerrit review --abandon '
                '--message="{message}" {patch_id}').format(
                    message=message,
                    patch_id=patch_id)
