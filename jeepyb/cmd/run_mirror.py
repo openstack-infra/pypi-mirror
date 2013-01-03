@@ -78,7 +78,9 @@ def main():
             run_command("git clean -x -f -d -q")
             print("*********************")
             print("Fetching pip requires for %s:%s" % (project, branch))
-            for requires_file in ("tools/pip-requires",
+            for requires_file in ("requirements.txt",
+                                  "test-requirements.txt",
+                                  "tools/pip-requires",
                                   "tools/test-requires"):
                 if os.path.exists(requires_file):
                     stanza = "-r %s" % requires_file
