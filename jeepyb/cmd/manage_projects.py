@@ -296,12 +296,11 @@ def main():
                         with open(os.path.join(repo_path,
                                                ".gitreview"),
                                   'w') as gitreview:
-                            gitreview.write("""
-    [gerrit]
-    host=%s
-    port=29418
-    project=%s
-    """ % (GERRIT_HOST, project_git))
+                            gitreview.write("""[gerrit]
+host=%s
+port=29418
+project=%s
+""" % (GERRIT_HOST, project_git))
                         git_command(repo_path, "add .gitreview")
                         cmd = "commit -a -m'Added .gitreview' --author=" \
                               "'Openstack Project Creator " \
