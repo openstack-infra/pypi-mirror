@@ -89,8 +89,9 @@ def set_in_progress(bugtask, launchpad, uploader, change_url):
     cursor.execute(query, searchkey)
     data = cursor.fetchone()
     if data:
-        bugtask.assignee = launchpad.people.getByOpenIDIdentifier(
-            identifier=data[0])
+        assignee = launchpad.people.getByOpenIDIdentifier(identifier=data[0])
+        if assignee:
+            bugtask.assignee = assignee
 
     bugtask.status = "In Progress"
     bugtask.lp_save()
