@@ -83,7 +83,7 @@ def set_in_progress(bugtask, launchpad, uploader, change_url):
                 SELECT t.account_id FROM account_external_ids t
                 WHERE t.email_address = %s )
             original ON t.account_id = original.account_id
-            AND t.external_id LIKE 'https://%%'"""
+            AND t.external_id LIKE 'https://login.launchpad.net%%'"""
 
     cursor = jeepyb.gerritdb.connect().cursor()
     cursor.execute(query, searchkey)
