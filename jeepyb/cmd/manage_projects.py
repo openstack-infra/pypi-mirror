@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # Copyright (C) 2011 OpenStack, LLC.
-# Copyright (c) 2012 Hewlett-Packard Development Company, L.P.
+# Copyright (C) 2012, 2013 Hewlett-Packard Development Company, L.P.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,36 +14,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-# manage_projects.py reads a project config file called projects.yaml
-# It should look like:
-
-# - homepage: http://openstack.org
-#   gerrit-host: review.openstack.org
-#   local-git-dir: /var/lib/git
-#   gerrit-key: /home/gerrit2/review_site/etc/ssh_host_rsa_key
-#   has-wiki: False
-#   has-issues: False
-#   has-downloads: False
-#   acl-dir: /home/gerrit2/acls
-#   acl-base: /home/gerrit2/acls/project.config
-# ---
-# - project: PROJECT_NAME
-#   options:
-#    - has-wiki
-#    - has-issues
-#    - has-downloads
-#    - has-pull-requests
-#   homepage: Some homepage that isn't http://openstack.org
-#   description: This is a great project
-#   remote: https://gerrit.googlesource.com/gerrit
-#   upstream: git://github.com/bushy/beards.git
-#   acl-config: /path/to/gerrit/project.config
-#   acl-append:
-#     - /path/to/gerrit/project.config
-#   acl-parameters:
-#     project: OTHER_PROJECT_NAME
-
-
 import ConfigParser
 import logging
 import os
@@ -51,12 +21,12 @@ import re
 import shlex
 import subprocess
 import tempfile
-import yaml
 
 import github
 import gerritlib.gerrit
 
 import jeepyb.gerritdb
+import jeepyb.projects
 
 logging.basicConfig(level=logging.ERROR)
 log = logging.getLogger("manage_projects")
@@ -107,8 +77,6 @@ def write_acl_config(project, acl_dir, acl_base, acl_append, parameters):
         config_file = os.path.join(repo_base, "%s.config" % project)
     else:
         config_file = os.path.join(acl_dir, "%s.config" % project)
-    if 'project' not in parameters:
-        parameters['project'] = project
     with open(config_file, 'w') as config:
         if acl_base and os.path.exists(acl_base):
             config.write(open(acl_base, 'r').read())
@@ -228,25 +196,17 @@ def make_ssh_wrapper(gerrit_user, gerrit_key):
 
 
 def main():
-
     PROJECTS_YAML = os.environ.get('PROJECTS_YAML',
                                    '/home/gerrit2/projects.yaml')
-    configs = [config for config in yaml.load_all(open(PROJECTS_YAML))]
-    defaults = configs[0][0]
-    default_has_issues = defaults.get('has-issues', False)
-    default_has_downloads = defaults.get('has-downloads', False)
-    default_has_wiki = defaults.get('has-wiki', False)
+    defaults, registry = jeepyb.projects.get_projects(PROJECTS_YAML)
 
-    LOCAL_GIT_DIR = defaults.get('local-git-dir', '/var/lib/git')
-    ACL_DIR = defaults.get('acl-dir')
-    GERRIT_HOST = defaults.get('gerrit-host')
-    GERRIT_USER = defaults.get('gerrit-user')
-    GERRIT_KEY = defaults.get('gerrit-key')
+    LOCAL_GIT_DIR = defaults['gerrit-defaults']['local-git-dir']
+    ACL_DIR = defaults['gerrit-defaults']['acl-dir']
+    GERRIT_HOST = defaults['gerrit-defaults']['host']
+    GERRIT_USER = defaults['gerrit-defaults']['user']
+    GERRIT_KEY = defaults['gerrit-defaults']['key']
 
-    GITHUB_SECURE_CONFIG = defaults.get(
-        'github-config',
-        '/etc/github/github-projects.secure.config')
-
+    GITHUB_SECURE_CONFIG = defaults['github-defaults']['config']
     secure_config = ConfigParser.ConfigParser()
     secure_config.read(GITHUB_SECURE_CONFIG)
 
@@ -264,13 +224,8 @@ def main():
     ssh_env = make_ssh_wrapper(GERRIT_USER, GERRIT_KEY)
     try:
 
-        for section in configs[1]:
-            project = section['project']
-            options = section.get('options', dict())
-            description = section.get('description', None)
-            homepage = section.get('homepage', defaults.get('homepage', None))
-            upstream = section.get('upstream', None)
-
+        for project, parameters in registry.items():
+            options = parameters['options']
             project_git = "%s.git" % project
             project_dir = os.path.join(LOCAL_GIT_DIR, project_git)
 
@@ -280,9 +235,6 @@ def main():
                 repo_name = project_split[1]
             else:
                 repo_name = project
-            has_issues = 'has-issues' in options or default_has_issues
-            has_downloads = 'has-downloads' in options or default_has_downloads
-            has_wiki = 'has-wiki' in options or default_has_wiki
             try:
                 org = orgs_dict[project_split[0].lower()]
             except KeyError:
@@ -291,19 +243,21 @@ def main():
             try:
                 repo = org.get_repo(repo_name)
             except github.GithubException:
-                repo = org.create_repo(repo_name,
-                                       homepage=homepage,
-                                       has_issues=has_issues,
-                                       has_downloads=has_downloads,
-                                       has_wiki=has_wiki)
-            if description:
-                repo.edit(repo_name, description=description)
-            if homepage:
-                repo.edit(repo_name, homepage=homepage)
+                repo = org.create_repo(
+                    repo_name,
+                    homepage=parameters.get('homepage'),
+                    has_issues='has-issues' in options,
+                    has_downloads='has-downloads' in options,
+                    has_wiki='has-wiki' in options)
+            if 'description' in parameters:
+                repo.edit(repo_name, description=parameters['description'])
+            if 'homepage' in parameters:
+                repo.edit(repo_name, homepage=parameters['homepage'])
 
-            repo.edit(repo_name, has_issues=has_issues,
-                      has_downloads=has_downloads,
-                      has_wiki=has_wiki)
+            repo.edit(repo_name,
+                      has_issues='has-issues' in options,
+                      has_downloads='has-downloads' in options,
+                      has_wiki='has-wiki' in options)
 
             if 'gerrit' not in [team.name for team in repo.get_teams()]:
                 teams = org.get_teams()
@@ -315,9 +269,9 @@ def main():
                 tmpdir = tempfile.mkdtemp()
                 try:
                     repo_path = os.path.join(tmpdir, 'repo')
-                    if upstream:
+                    if 'upstream' in parameters:
                         run_command("git clone %(upstream)s %(repo_path)s" %
-                                    dict(upstream=upstream,
+                                    dict(upstream=parameters['upstream'],
                                          repo_path=repo_path))
                         git_command(repo_path,
                                     "fetch origin "
@@ -355,38 +309,32 @@ project=%s
                 finally:
                     run_command("rm -fr %s" % tmpdir)
 
-            try:
-                acl_config = section.get('acl-config',
-                                         '%s.config' % os.path.join(ACL_DIR,
-                                                                    project))
-            except AttributeError:
-                acl_config = None
+            acl_config = parameters['acl-config']
 
-            if acl_config:
-                if not os.path.isfile(acl_config):
-                    write_acl_config(project,
-                                     ACL_DIR,
-                                     section.get('acl-base', None),
-                                     section.get('acl-append', []),
-                                     section.get('acl-parameters', {}))
-                tmpdir = tempfile.mkdtemp()
-                try:
-                    repo_path = os.path.join(tmpdir, 'repo')
-                    ret, _ = run_command_status("git init %s" % repo_path)
-                    if ret != 0:
-                        continue
-                    if (fetch_config(project,
-                                     remote_url,
-                                     repo_path,
-                                     ssh_env) and
-                        copy_acl_config(project, repo_path,
-                                        acl_config) and
-                            create_groups_file(project, gerrit, repo_path)):
-                        push_acl_config(project,
-                                        remote_url,
-                                        repo_path,
-                                        ssh_env)
-                finally:
-                    run_command("rm -fr %s" % tmpdir)
+            if not os.path.isfile(acl_config):
+                write_acl_config(project,
+                                 ACL_DIR,
+                                 parameters['acl-base'],
+                                 parameters['acl-append'],
+                                 parameters['acl-parameters'])
+            tmpdir = tempfile.mkdtemp()
+            try:
+                repo_path = os.path.join(tmpdir, 'repo')
+                ret, _ = run_command_status("git init %s" % repo_path)
+                if ret != 0:
+                    continue
+                if (fetch_config(project,
+                                 remote_url,
+                                 repo_path,
+                                 ssh_env) and
+                    copy_acl_config(project, repo_path,
+                                    parameters['acl-config']) and
+                        create_groups_file(project, gerrit, repo_path)):
+                    push_acl_config(project,
+                                    remote_url,
+                                    repo_path,
+                                    ssh_env)
+            finally:
+                run_command("rm -fr %s" % tmpdir)
     finally:
         os.unlink(ssh_env['GIT_SSH'])
