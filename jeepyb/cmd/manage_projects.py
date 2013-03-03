@@ -25,6 +25,7 @@
 #   has-issues: False
 #   has-downloads: False
 #   acl-dir: /home/gerrit2/acls
+#   acl-base: /home/gerrit2/acls/project.config
 # ---
 # - project: PROJECT_NAME
 #   options:
@@ -37,6 +38,10 @@
 #   remote: https://gerrit.googlesource.com/gerrit
 #   upstream: git://github.com/bushy/beards.git
 #   acl-config: /path/to/gerrit/project.config
+#   acl-append:
+#     - /path/to/gerrit/project.config
+#   acl-parameters:
+#     super-project: OTHER_PROJECT_NAME
 
 
 import ConfigParser
@@ -88,6 +93,29 @@ def git_command_output(repo_dir, sub_cmd, env={}):
     cmd = "git --git-dir=%s --work-tree=%s %s" % (git_dir, repo_dir, sub_cmd)
     status, out = run_command(cmd, True, env)
     return (status, out)
+
+
+def write_acl_config(project, acl_dir, acl_base, acl_append, parameters):
+    project_parts = os.path.split(project)
+    if len(project_parts) > 1:
+        repo_base = os.path.join(acl_dir, *project_parts[:-1])
+        if not os.path.exists(repo_base):
+            os.path.makedirs(repo_base)
+        if not os.path.isdir(repo_base):
+            return 1
+        config_file = os.path.join(repo_base, "%s.config" % project_parts[-1])
+    else:
+        config_file = os.path.join(acl_dir, "%s.config" % project)
+    with open(config_file, 'w') as config:
+        if acl_base and os.path.exists(acl_base):
+            config.write(open(acl_base, 'r').read())
+        for acl_snippet in acl_append:
+            if not os.path.exists(acl_snippet):
+                acl_snippet = os.path.join(acl_dir, acl_snippet)
+            if not os.path.exists(acl_snippet):
+                continue
+            with open(acl_snippet, 'r') as append_content:
+                config.write(append_content.read() % parameters)
 
 
 def fetch_config(project, remote_url, repo_path, env={}):
@@ -332,6 +360,12 @@ project=%s
                 acl_config = None
 
             if acl_config:
+                if not os.path.isfile(acl_config):
+                    write_acl_config(project,
+                                     ACL_DIR,
+                                     section.get('acl-base', None),
+                                     section.get('acl-append', []),
+                                     section.get('acl-parameters', {}))
                 tmpdir = tempfile.mkdtemp()
                 try:
                     repo_path = os.path.join(tmpdir, 'repo')
