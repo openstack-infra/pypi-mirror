@@ -24,6 +24,7 @@
 #   has-wiki: False
 #   has-issues: False
 #   has-downloads: False
+#   acl-dir: /home/gerrit2/acls
 # ---
 # - project: PROJECT_NAME
 #   options:
@@ -35,7 +36,7 @@
 #   description: This is a great project
 #   remote: https://gerrit.googlesource.com/gerrit
 #   upstream: git://github.com/bushy/beards.git
-#   acl_config: /path/to/gerrit/project.config
+#   acl-config: /path/to/gerrit/project.config
 
 
 import ConfigParser
@@ -206,6 +207,7 @@ def main():
     default_has_wiki = defaults.get('has-wiki', False)
 
     LOCAL_GIT_DIR = defaults.get('local-git-dir', '/var/lib/git')
+    ACL_DIR = defaults.get('acl-dir')
     GERRIT_HOST = defaults.get('gerrit-host')
     GERRIT_USER = defaults.get('gerrit-user')
     GERRIT_KEY = defaults.get('gerrit-key')
@@ -322,7 +324,14 @@ project=%s
                 finally:
                     run_command("rm -fr %s" % tmpdir)
 
-            if 'acl_config' in section:
+            try:
+                acl_config = section.get('acl_config',
+                                         '%s.config' % os.path.join(ACL_DIR,
+                                                                    project))
+            except AttributeError:
+                acl_config = None
+
+            if acl_config:
                 tmpdir = tempfile.mkdtemp()
                 try:
                     repo_path = os.path.join(tmpdir, 'repo')
@@ -334,7 +343,7 @@ project=%s
                                      repo_path,
                                      ssh_env) and
                         copy_acl_config(project, repo_path,
-                                        section['acl_config']) and
+                                        acl_config) and
                             create_groups_file(project, gerrit, repo_path)):
                         push_acl_config(project,
                                         remote_url,
