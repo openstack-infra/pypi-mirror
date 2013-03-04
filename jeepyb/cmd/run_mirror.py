@@ -150,7 +150,7 @@ def main():
                                       PIP_DOWNLOAD_CACHE, reqs))
                     if DEBUG:
                         print(out)
-                    if "\nSuccessfully installed " not in out:
+                    if "\nSuccessfully downloaded " not in out:
                         sys.stderr.write(out)
                         print("pip install did not indicate success")
                     print("cached:\n%s" % freeze)
