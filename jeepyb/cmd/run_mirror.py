@@ -101,7 +101,7 @@ def main():
             if DEBUG:
                 print(out)
         os.chdir(short_project)
-        out = run_command("git fetch origin")
+        out = run_command("git fetch -p origin")
         if DEBUG:
             print(out)
 
@@ -140,7 +140,8 @@ def main():
                     freeze = run_command("%s freeze -l" % pip)
                     reqfd = open(reqs, "w")
                     for line in freeze.split("\n"):
-                        if "==" in line:
+                        if line.startswith("-e ") or (
+                                "==" in line and " " not in line):
                             reqfd.write(line + "\n")
                     reqfd.close()
                     out = run_command(venv_format % (PIP_DOWNLOAD_CACHE, venv))
