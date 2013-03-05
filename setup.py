@@ -59,6 +59,7 @@ setuptools.setup(
             'fetch-remotes=jeepyb.cmd.fetch_remotes:main',
             'manage-projects=jeepyb.cmd.manage_projects:main',
             'notify-impact=jeepyb.cmd.notify_impact:main',
+            'openstackwatch=jeepyb.cmd.openstackwatch:main',
             'process-cache=jeepyb.cmd.process_cache:main',
             'run-mirror=jeepyb.cmd.run_mirror:main',
             'trivial-rebase=jeepyb.cmd.trivial_rebase:main',
