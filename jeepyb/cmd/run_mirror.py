@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 # Copyright (C) 2011 OpenStack, LLC.
-# Copyright (c) 2013 Hewlett-Packard Development Company, L.P.
+# Copyright (C) 2013 Hewlett-Packard Development Company, L.P.
+# Copyright (C) 2013 OpenStack Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,14 +15,23 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-# run_mirrors reads a project config file called projects.yaml
-# It should look like:
+# run_mirror reads a YAML config file like:
+#   cache-root: /tmp/cache
 #
-# - project: PROJECT_NAME
+#   mirrors:
+#     - name: openstack
+#       projects:
+#         - https://github.com/openstack/requirements
+#       output: /tmp/mirror/openstack
+#
+#     - name: openstack-infra
+#       projects:
+#         - https://github.com/openstack-infra/config
+#       output: /tmp/mirror/openstack-infra
 #
 # The algorithm it attempts to follow is:
 #
-# for each project in projects.yaml:
+# for each project:
 #   clone if necessary and fetch origin
 #   for each project-branch:
 #     create new virtualenv
@@ -31,11 +41,8 @@
 #       create new virtualenv
 #       pip install (download only) full-reqs into virtualenv
 #
-# By default only summary information is printed on stdout, but if
-# DEFAULT is enabled in the calling environment then stdout of all
-# shell commands run is also printed. Due to its copiousness and
-# buffering, however, DEBUG level output is best suited to file
-# redirection.
+# By default only summary information is printed on stdout (see the
+# -d command line option to get more debug info).
 #
 # If "pip install" for a branch's requirements fails to complete
 # (based on parsing of its output), that output will be copied to
@@ -51,115 +58,276 @@ import shutil
 import sys
 import tempfile
 import yaml
+import argparse
+import re
+import urllib
+import datetime
+import md5
 
 
-def run_command(cmd):
-    cmd_list = shlex.split(str(cmd))
-    p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT)
-    (out, nothing) = p.communicate()
-    return out.strip()
+class Mirror(object):
+    def __init__(self):
+        parser = argparse.ArgumentParser(
+            description='Build a pypi mirror from requirements')
+        parser.add_argument('-c', dest='config',
+                            help='specify the config file')
+        parser.add_argument('-n', dest='noop', action='store_true',
+                            help='do not run any commands')
+        parser.add_argument('--no-pip', dest='no_pip', action='store_true',
+                            help='do not run any pip commands')
+        parser.add_argument('--verbose', dest='debug', action='store_true',
+                            help='output verbose debug information')
+        parser.add_argument('--no-download', dest='no_download',
+                            action='store_true',
+                            help='only process the pip cache into a mirror '
+                            '(do not download)')
+        parser.add_argument('--no-process', dest='no_process',
+                            action='store_true',
+                            help='only download into the pip cache '
+                            '(do not process the cache into a mirror)')
+        parser.add_argument('--no-update', dest='no_update',
+                            action='store_true',
+                            help='do not update any git repos')
+        self.args = parser.parse_args()
+        self.config = yaml.load(open(self.args.config))
 
+    def run_command(self, cmd):
+        cmd_list = shlex.split(str(cmd))
+        self.debug("Run: %s" % cmd)
+        if self.args.noop:
+            return ''
+        if self.args.no_pip and cmd_list[0].endswith('pip'):
+            return ''
+        p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT)
+        (out, nothing) = p.communicate()
+        out = out.strip()
+        self.debug(out)
+        return out
 
-def main():
+    def run(self):
+        for mirror in self.config['mirrors']:
+            if not self.args.no_download:
+                self.build_mirror(mirror)
+            if not self.args.no_process:
+                self.process_cache(mirror)
 
-    DEBUG = True if os.environ.get('DEBUG', '').lower() in ('enabled',
-                                                            'enable',
-                                                            'true',
-                                                            'yes',
-                                                            'on',
-                                                            '1') else False
-    PROJECTS_YAML = os.environ.get('PROJECTS_YAML',
-                                   '/etc/openstackci/projects.yaml')
-    PIP_TEMP_DOWNLOAD = os.environ.get('PIP_TEMP_DOWNLOAD',
-                                       '/var/lib/pip-download')
-    PIP_DOWNLOAD_CACHE = os.environ.get('PIP_DOWNLOAD_CACHE',
-                                        '/var/cache/pip')
-    GIT_SOURCE = os.environ.get('GIT_SOURCE', 'https://github.com')
-    pip_format = "%s install -U %s --exists-action=w -r %s"
-    venv_format = ("/usr/local/bin/virtualenv --clear --distribute "
-                   "--extra-search-dir=%s %s")
+    def chdir(self, dest):
+        self.debug("cd %s" % dest)
+        if not self.args.noop:
+            os.chdir(dest)
 
-    (defaults, config) = [config for config in
-                          yaml.load_all(open(PROJECTS_YAML))]
+    def debug(self, msg):
+        if self.args.debug:
+            print msg
 
-    workdir = tempfile.mkdtemp()
-    reqs = os.path.join(workdir, "reqs")
-    venv = os.path.join(workdir, "venv")
-    pip = os.path.join(venv, "bin", "pip")
+    def process_http_requirements(self, reqlist, pip_cache_dir, pip):
+        new_reqs = []
+        for reqfile in reqlist:
+            for req in open(reqfile):
+                req = req.strip()
+                # Handle http://, https://, and git+https?://
+                if not re.search('https?://', req):
+                    new_reqs.append(req)
+                    continue
+                target_url = req.split('#', 1)[0]
+                target_file = os.path.join(pip_cache_dir,
+                                           urllib.quote(target_url, ''))
+                if os.path.exists(target_file):
+                    self.debug("Unlink: %s" % target_file)
+                    os.unlink(target_file)
+                if os.path.exists(target_file + '.content-type'):
+                    self.debug("Unlink: %s.content-type" % target_file)
+                    os.unlink(target_file + '.content-type')
+        return new_reqs
 
-    for section in config:
-        project = section['project']
-        if DEBUG:
-            print("*********************\nupdating %s repository" % project)
+    def build_mirror(self, mirror):
+        print("Building mirror: %s" % mirror['name'])
+        pip_format = ("%s install -M -U %s --exists-action=w "
+                      "--download-cache=%s -r %s")
+        venv_format = ("virtualenv --clear --distribute "
+                       "--extra-search-dir=%s %s")
 
-        os.chdir(PIP_TEMP_DOWNLOAD)
-        short_project = project.split('/')[1]
-        if not os.path.isdir(short_project):
-            out = run_command("git clone %s/%s.git %s" % (GIT_SOURCE, project,
-                                                          short_project))
-            if DEBUG:
-                print(out)
-        os.chdir(short_project)
-        out = run_command("git fetch -p origin")
-        if DEBUG:
-            print(out)
+        workdir = tempfile.mkdtemp()
+        reqs = os.path.join(workdir, "reqs")
+        venv = os.path.join(workdir, "venv")
+        pip = os.path.join(venv, "bin", "pip")
 
-        for branch in run_command("git branch -a").split("\n"):
-            branch = branch.strip()
-            if (not branch.startswith("remotes/origin")
-                    or "origin/HEAD" in branch):
-                continue
-            print("*********************")
-            print("Fetching pip requires for %s:%s" % (project, branch))
-            out = run_command("git reset --hard %s" % branch)
-            if DEBUG:
-                print(out)
-            out = run_command("git clean -x -f -d -q")
-            if DEBUG:
-                print(out)
-            reqlist = []
-            for requires_file in ("requirements.txt",
-                                  "test-requirements.txt",
-                                  "tools/pip-requires",
-                                  "tools/test-requires"):
-                if os.path.exists(requires_file):
-                    reqlist.append(requires_file)
-            if reqlist:
-                out = run_command(venv_format % (PIP_DOWNLOAD_CACHE, venv))
-                if DEBUG:
-                    print(out)
-                out = run_command(pip_format % (pip, "",
-                                                " -r ".join(reqlist)))
-                if DEBUG:
-                    print(out)
-                if "\nSuccessfully installed " not in out:
-                    sys.stderr.write("Installing pip requires for %s:%s "
-                                     "failed.\n%s\n" %
-                                     (project, branch, out))
-                    print("pip install did not indicate success")
-                else:
-                    freeze = run_command("%s freeze -l" % pip)
-                    reqfd = open(reqs, "w")
-                    for line in freeze.split("\n"):
-                        if line.startswith("-e ") or (
-                                "==" in line and " " not in line):
-                            reqfd.write(line + "\n")
-                    reqfd.close()
-                    out = run_command(venv_format % (PIP_DOWNLOAD_CACHE, venv))
-                    if DEBUG:
-                        print(out)
-                    out = run_command(pip_format % (pip, "--no-install",
-                                      reqs))
-                    if DEBUG:
-                        print(out)
-                    if "\nSuccessfully downloaded " not in out:
-                        sys.stderr.write("Downloading pip requires for %s:%s "
+        project_cache_dir = os.path.join(self.config['cache-root'],
+                                         'projects')
+        pip_cache_dir = os.path.join(self.config['cache-root'],
+                                     'pip', mirror['name'])
+        if not self.args.noop:
+            if not os.path.exists(project_cache_dir):
+                os.makedirs(project_cache_dir)
+            if not os.path.exists(pip_cache_dir):
+                os.makedirs(pip_cache_dir)
+
+        for project in mirror['projects']:
+            print("Updating repository: %s" % project)
+            self.chdir(project_cache_dir)
+            short_project = project.split('/')[-1]
+            if short_project.endswith('.git'):
+                short_project = short_project[:-4]
+            if not os.path.isdir(short_project):
+                out = self.run_command("git clone %s %s" %
+                                       (project, short_project))
+            self.chdir(os.path.join(project_cache_dir,
+                                    short_project))
+            out = self.run_command("git fetch -p origin")
+
+            for branch in self.run_command("git branch -a").split("\n"):
+                branch = branch.strip()
+                if (not branch.startswith("remotes/origin")
+                        or "origin/HEAD" in branch):
+                    continue
+                print("Fetching pip requires for %s:%s" %
+                      (project, branch))
+                if not self.args.no_update:
+                    out = self.run_command("git reset --hard %s" % branch)
+                    out = self.run_command("git clean -x -f -d -q")
+                reqlist = []
+                for requires_file in ("requirements.txt",
+                                      "test-requirements.txt",
+                                      "tools/pip-requires",
+                                      "tools/test-requires"):
+                    if os.path.exists(requires_file):
+                        reqlist.append(requires_file)
+                if reqlist:
+                    out = self.run_command(venv_format %
+                                           (pip_cache_dir, venv))
+                    new_reqs = self.process_http_requirements(reqlist,
+                                                              pip_cache_dir,
+                                                              pip)
+                    (reqfp, reqfn) = tempfile.mkstemp()
+                    os.write(reqfp, '\n'.join(new_reqs))
+                    os.close(reqfp)
+                    out = self.run_command(pip_format %
+                                           (pip, "", pip_cache_dir,
+                                            reqfn))
+                    if "\nSuccessfully installed " not in out:
+                        sys.stderr.write("Installing pip requires for %s:%s "
                                          "failed.\n%s\n" %
                                          (project, branch, out))
                         print("pip install did not indicate success")
-                    print("cached:\n%s" % freeze)
-            else:
-                print("no requirements")
+                    else:
+                        freeze = self.run_command("%s freeze -l" % pip)
+                        reqfd = open(reqs, "w")
+                        for line in freeze.split("\n"):
+                            if line.startswith("-e ") or (
+                                    "==" in line and " " not in line):
+                                reqfd.write(line + "\n")
+                        reqfd.close()
+                        out = self.run_command(venv_format %
+                                               (pip_cache_dir, venv))
+                        out = self.run_command(pip_format %
+                                               (pip, "--no-install",
+                                                pip_cache_dir, reqs))
+                        if "\nSuccessfully downloaded " not in out:
+                            sys.stderr.write("Downloading pip requires for "
+                                             "%s:%s failed.\n%s\n" %
+                                             (project, branch, out))
+                            print("pip install did not indicate success")
+                        print("cached:\n%s" % freeze)
+                else:
+                    print("no requirements")
+        shutil.rmtree(workdir)
 
-    shutil.rmtree(workdir)
+    def process_cache(self, mirror):
+        if self.args.noop:
+            return
+
+        pip_cache_dir = os.path.join(self.config['cache-root'],
+                                     'pip', mirror['name'])
+        destination_mirror = mirror['output']
+
+        PACKAGE_VERSION_RE = re.compile(r'(.*)-[0-9]')
+        full_html_line = "<a href='{dir}/{name}'>{name}</a><br />\n"
+
+        packages = {}
+        package_count = 0
+
+        if not os.path.exists(destination_mirror):
+            os.makedirs(destination_mirror)
+
+        for filename in os.listdir(pip_cache_dir):
+            if filename.endswith('content-type'):
+                continue
+
+            realname = urllib.unquote(filename)
+            # The ? accounts for sourceforge downloads
+            tarball = os.path.basename(realname).split("?")[0]
+            name_match = PACKAGE_VERSION_RE.search(tarball)
+
+            if name_match is None:
+                continue
+            package_name = name_match.group(1)
+
+            version_list = packages.get(package_name, {})
+            version_list[tarball] = filename
+            packages[package_name] = version_list
+            package_count = package_count + 1
+
+        full_html = open(os.path.join(destination_mirror, ".full.html"), 'w')
+        simple_html = open(os.path.join(destination_mirror, ".index.html"),
+                           'w')
+
+        header = ("<html><head><title>PyPI Mirror</title></head>"
+                  "<body><h1>PyPI Mirror</h1><h2>Last update: %s</h2>\n\n"
+                  % datetime.datetime.utcnow().strftime("%c UTC"))
+        full_html.write(header)
+        simple_html.write(header)
+
+        for package_name, versions in packages.items():
+            destination_dir = os.path.join(destination_mirror, package_name)
+            if not os.path.isdir(destination_dir):
+                os.makedirs(destination_dir)
+            safe_dir = urllib.quote(package_name)
+            simple_html.write("<a href='%s'>%s</a><br />\n" %
+                              (safe_dir, safe_dir))
+            with open(os.path.join(destination_dir, ".index.html"),
+                      'w') as index:
+                index.write("""<html><head>
+          <title>%s &ndash; PyPI Mirror</title>
+        </head><body>\n""" % package_name)
+                for tarball, filename in versions.items():
+                    source_path = os.path.join(pip_cache_dir, filename)
+                    destination_path = os.path.join(destination_dir,
+                                                    tarball)
+                    dot_destination_path = os.path.join(destination_dir,
+                                                        '.' + tarball)
+                    with open(dot_destination_path, 'w') as dest:
+                        src = open(source_path, 'r').read()
+                        md5sum = md5.md5(src).hexdigest()
+                        dest.write(src)
+
+                        safe_name = urllib.quote(tarball)
+
+                        full_html.write(full_html_line.format(dir=safe_dir,
+                                                              name=safe_name))
+                        index.write("<a href='%s#md5=%s'>%s</a>\n" %
+                                    (safe_name, md5sum, safe_name))
+                    os.rename(dot_destination_path, destination_path)
+                index.write("</body></html>\n")
+            os.rename(os.path.join(destination_dir, ".index.html"),
+                      os.path.join(destination_dir, "index.html"))
+        footer = """<p class='footer'>Generated by process_cache.py; %d
+        packages mirrored. </p>
+        </body></html>\n""" % package_count
+        full_html.write(footer)
+        full_html.close()
+        os.rename(os.path.join(destination_mirror, ".full.html"),
+                  os.path.join(destination_mirror, "full.html"))
+        simple_html.write(footer)
+        simple_html.close()
+        os.rename(os.path.join(destination_mirror, ".index.html"),
+                  os.path.join(destination_mirror, "index.html"))
+
+
+def main():
+    mb = Mirror()
+    mb.run()
+
+
+if __name__ == "__main__":
+    main()
