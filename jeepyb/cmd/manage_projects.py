@@ -325,7 +325,7 @@ project=%s
                     run_command("rm -fr %s" % tmpdir)
 
             try:
-                acl_config = section.get('acl_config',
+                acl_config = section.get('acl-config',
                                          '%s.config' % os.path.join(ACL_DIR,
                                                                     project))
             except AttributeError:
