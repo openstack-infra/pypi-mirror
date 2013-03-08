@@ -41,7 +41,7 @@
 #   acl-append:
 #     - /path/to/gerrit/project.config
 #   acl-parameters:
-#     super-project: OTHER_PROJECT_NAME
+#     project: OTHER_PROJECT_NAME
 
 
 import ConfigParser
@@ -103,9 +103,12 @@ def write_acl_config(project, acl_dir, acl_base, acl_append, parameters):
             os.makedirs(repo_base)
         if not os.path.isdir(repo_base):
             return 1
-        config_file = os.path.join(repo_base, "%s.config" % project_parts[-1])
+        project = project_parts[-1]
+        config_file = os.path.join(repo_base, "%s.config" % project)
     else:
         config_file = os.path.join(acl_dir, "%s.config" % project)
+    if 'project' not in parameters:
+        parameters['project'] = project
     with open(config_file, 'w') as config:
         if acl_base and os.path.exists(acl_base):
             config.write(open(acl_base, 'r').read())
