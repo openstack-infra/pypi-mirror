@@ -76,7 +76,7 @@ def main():
     PIP_DOWNLOAD_CACHE = os.environ.get('PIP_DOWNLOAD_CACHE',
                                         '/var/cache/pip')
     GIT_SOURCE = os.environ.get('GIT_SOURCE', 'https://github.com')
-    pip_format = "%s install -U %s --exists-action=w -b %s -r %s"
+    pip_format = "%s install -U %s --exists-action=w -r %s"
     venv_format = ("/usr/local/bin/virtualenv --clear --distribute "
                    "--extra-search-dir=%s %s")
 
@@ -129,7 +129,7 @@ def main():
                 out = run_command(venv_format % (PIP_DOWNLOAD_CACHE, venv))
                 if DEBUG:
                     print(out)
-                out = run_command(pip_format % (pip, "", PIP_DOWNLOAD_CACHE,
+                out = run_command(pip_format % (pip, "",
                                                 " -r ".join(reqlist)))
                 if DEBUG:
                     print(out)
@@ -150,7 +150,7 @@ def main():
                     if DEBUG:
                         print(out)
                     out = run_command(pip_format % (pip, "--no-install",
-                                      PIP_DOWNLOAD_CACHE, reqs))
+                                      reqs))
                     if DEBUG:
                         print(out)
                     if "\nSuccessfully downloaded " not in out:
