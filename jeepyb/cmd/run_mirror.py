@@ -135,8 +135,8 @@ def main():
                     print(out)
                 if "\nSuccessfully installed " not in out:
                     sys.stderr.write("Installing pip requires for %s:%s "
-                                     "failed." % (project, branch))
-                    sys.stderr.write(out)
+                                     "failed.\n%s\n" %
+                                     (project, branch, out))
                     print("pip install did not indicate success")
                 else:
                     freeze = run_command("%s freeze -l" % pip)
@@ -155,8 +155,8 @@ def main():
                         print(out)
                     if "\nSuccessfully downloaded " not in out:
                         sys.stderr.write("Downloading pip requires for %s:%s "
-                                         "failed." % (project, branch))
-                        sys.stderr.write(out)
+                                         "failed.\n%s\n" %
+                                         (project, branch, out))
                         print("pip install did not indicate success")
                     print("cached:\n%s" % freeze)
             else:
