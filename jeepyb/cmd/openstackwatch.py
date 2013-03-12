@@ -15,7 +15,8 @@
 
 # This script is designed to generate rss feeds for subscription from updates
 # to various gerrit tracked projects. It is intended to be run periodically,
-# for example hourly via cron.
+# for example hourly via cron. It takes an optional argument to specify the
+# path to a configuration file.
 # -*- encoding: utf-8 -*-
 __author__ = "Chmouel Boudjnah <chmouel@chmouel.com>"
 import json
@@ -73,7 +74,11 @@ def parse_ini(inifile):
                                     OUTPUT_MODE)
     return ret
 
-CONFIG = parse_ini(os.path.join(curdir, '..', 'config', 'openstackwatch.ini'))
+try:
+    conffile = sys.argv[1]
+except IndexError:
+    conffile = os.path.join(curdir, '..', 'config', 'openstackwatch.ini')
+CONFIG = parse_ini(conffile)
 
 
 def debug(msg):
