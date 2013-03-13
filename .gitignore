@@ -5,4 +5,4 @@ jeepyb/versioninfo
 AUTHORS
 ChangeLog
 dist/*
-*.egg-info
+*.egg*
