@@ -100,7 +100,7 @@ def write_acl_config(project, acl_dir, acl_base, acl_append, parameters):
     if len(project_parts) > 1:
         repo_base = os.path.join(acl_dir, *project_parts[:-1])
         if not os.path.exists(repo_base):
-            os.path.makedirs(repo_base)
+            os.makedirs(repo_base)
         if not os.path.isdir(repo_base):
             return 1
         config_file = os.path.join(repo_base, "%s.config" % project_parts[-1])
