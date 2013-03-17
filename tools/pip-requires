@@ -4,3 +4,5 @@ paramiko
 PyGithub
 pyyaml
 pkginfo
+PyRSS2Gen
+python-swiftclient
