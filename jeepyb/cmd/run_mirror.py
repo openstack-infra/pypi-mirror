@@ -143,14 +143,14 @@ class Mirror(object):
         return new_reqs
 
     def find_pkg_info(self, path):
-        versions = []
+        versions = set()
         for root, dirs, files in os.walk(path):
             if not root.endswith('.egg'):
                 continue
             if not os.path.exists(os.path.join(root, 'EGG-INFO', 'PKG-INFO')):
                 continue
             package = pkginfo.Develop(root)
-            versions.append('%s==%s' % (package.name, package.version))
+            versions.add('%s==%s' % (package.name, package.version))
         return versions
 
     def build_mirror(self, mirror):
@@ -232,8 +232,7 @@ class Mirror(object):
                         for line in freeze.split("\n"):
                             if line.startswith("-e ") or (
                                     "==" in line and " " not in line):
-                                if line not in requires:
-                                    requires.append(line)
+                                requires.add(line)
                         for r in requires:
                             reqfd.write(r + "\n")
                         reqfd.close()
