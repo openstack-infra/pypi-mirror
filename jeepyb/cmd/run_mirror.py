@@ -51,18 +51,19 @@
 # redirected to a log, and also avoids one broken project preventing
 # caching of requirements for others.
 
-import os
-import subprocess
-import shlex
-import shutil
-import sys
-import tempfile
-import yaml
 import argparse
-import re
-import urllib
 import datetime
 import md5
+import os
+import pkginfo
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
+import urllib
+import yaml
 
 
 class Mirror(object):
@@ -141,16 +142,28 @@ class Mirror(object):
                     os.unlink(target_file + '.content-type')
         return new_reqs
 
+    def find_pkg_info(self, path):
+        versions = []
+        for root, dirs, files in os.walk(path):
+            if not root.endswith('.egg'):
+                continue
+            if not os.path.exists(os.path.join(root, 'EGG-INFO', 'PKG-INFO')):
+                continue
+            package = pkginfo.Develop(root)
+            versions.append('%s==%s' % (package.name, package.version))
+        return versions
+
     def build_mirror(self, mirror):
         print("Building mirror: %s" % mirror['name'])
         pip_format = ("%s install -M -U %s --exists-action=w "
-                      "--download-cache=%s -r %s")
+                      "--download-cache=%s --build %s -r %s")
         venv_format = ("virtualenv --clear --distribute "
                        "--extra-search-dir=%s %s")
 
         workdir = tempfile.mkdtemp()
         reqs = os.path.join(workdir, "reqs")
         venv = os.path.join(workdir, "venv")
+        build = os.path.join(workdir, "build")
         pip = os.path.join(venv, "bin", "pip")
 
         project_cache_dir = os.path.join(self.config['cache-root'],
@@ -196,6 +209,8 @@ class Mirror(object):
                 if reqlist:
                     out = self.run_command(venv_format %
                                            (pip_cache_dir, venv))
+                    if os.path.exists(build):
+                        shutil.rmtree(build)
                     new_reqs = self.process_http_requirements(reqlist,
                                                               pip_cache_dir,
                                                               pip)
@@ -204,7 +219,7 @@ class Mirror(object):
                     os.close(reqfp)
                     out = self.run_command(pip_format %
                                            (pip, "", pip_cache_dir,
-                                            reqfn))
+                                            build, reqfn))
                     if "\nSuccessfully installed " not in out:
                         sys.stderr.write("Installing pip requires for %s:%s "
                                          "failed.\n%s\n" %
@@ -212,17 +227,23 @@ class Mirror(object):
                         print("pip install did not indicate success")
                     else:
                         freeze = self.run_command("%s freeze -l" % pip)
+                        requires = self.find_pkg_info(build)
                         reqfd = open(reqs, "w")
                         for line in freeze.split("\n"):
                             if line.startswith("-e ") or (
                                     "==" in line and " " not in line):
-                                reqfd.write(line + "\n")
+                                if line not in requires:
+                                    requires.append(line)
+                        for r in requires:
+                            reqfd.write(r + "\n")
                         reqfd.close()
                         out = self.run_command(venv_format %
                                                (pip_cache_dir, venv))
+                        if os.path.exists(build):
+                            shutil.rmtree(build)
                         out = self.run_command(pip_format %
                                                (pip, "--no-install",
-                                                pip_cache_dir, reqs))
+                                                pip_cache_dir, build, reqs))
                         if "\nSuccessfully downloaded " not in out:
                             sys.stderr.write("Downloading pip requires for "
                                              "%s:%s failed.\n%s\n" %
