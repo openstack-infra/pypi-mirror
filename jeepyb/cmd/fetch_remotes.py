@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 # Copyright (C) 2011 OpenStack, LLC.
-# Copyright (C) 2013 Hewlett-Packard Development Company, L.P.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,13 +13,25 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+# Fetch remotes reads a project config file called projects.yaml
+# It should look like:
+
+# - homepage: http://openstack.org
+#   team-id: 153703
+#   has-wiki: False
+#   has-issues: False
+#   has-downloads: False
+# ---
+# - project: PROJECT_NAME
+#   options:
+#   - remote: https://gerrit.googlesource.com/gerrit
+
 
 import logging
 import os
 import subprocess
 import shlex
-
-import jeepyb.projects
+import yaml
 
 
 def run_command(cmd, status=False, env={}):
@@ -47,17 +58,20 @@ def main():
     PROJECTS_YAML = os.environ.get('PROJECTS_YAML',
                                    '/home/gerrit2/projects.yaml')
 
-    projects = jeepyb.projects.get_projects(PROJECTS_YAML)[1]
+    (defaults, config) = [config for config in
+                          yaml.load_all(open(PROJECTS_YAML))]
 
-    for project, parameters in projects.items():
-        if 'remote' not in parameters:
+    for section in config:
+        project = section['project']
+
+        if 'remote' not in section:
             continue
 
         project_git = "%s.git" % project
         os.chdir(os.path.join(REPO_ROOT, project_git))
 
         # Make sure that the specified remote exists
-        remote_url = parameters['remote']
+        remote_url = section['remote']
         # We could check if it exists first, but we're ignoring output anyway
         # So just try to make it, and it'll either make a new one or do nothing
         run_command("git remote add -f upstream %s" % remote_url)

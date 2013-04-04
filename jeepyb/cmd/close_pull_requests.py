@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 # Copyright (C) 2011 OpenStack, LLC.
-# Copyright (c) 2013 Hewlett-Packard Development Company, L.P.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +12,19 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+
+# Github pull requests closer reads a project config file called projects.yaml
+# It should look like:
+
+# - homepage: http://openstack.org
+#   team-id: 153703
+#   has-wiki: False
+#   has-issues: False
+#   has-downloads: False
+# ---
+# - project: PROJECT_NAME
+#   options:
+#   - has-pull-requests
 
 # Github authentication information is read from github.secure.config,
 # which should look like:
@@ -29,9 +41,8 @@
 import ConfigParser
 import github
 import os
+import yaml
 import logging
-
-import jeepyb.projects
 
 MESSAGE = """Thank you for contributing to OpenStack!
 
@@ -53,7 +64,8 @@ def main():
 
     secure_config = ConfigParser.ConfigParser()
     secure_config.read(GITHUB_SECURE_CONFIG)
-    projects = jeepyb.projects.get_config(PROJECTS_YAML)[1]
+    (defaults, config) = [config for config in
+                          yaml.load_all(open(PROJECTS_YAML))]
 
     if secure_config.has_option("github", "oauth_token"):
         ghub = github.Github(secure_config.get("github", "oauth_token"))
@@ -63,10 +75,11 @@ def main():
 
     orgs = ghub.get_user().get_orgs()
     orgs_dict = dict(zip([o.login.lower() for o in orgs], orgs))
-    for project, parameters in projects.items:
+    for section in config:
+        project = section['project']
 
         # Make sure we're supposed to close pull requests for this project:
-        if 'has-pull-requests' in parameters['options']:
+        if 'options' in section and 'has-pull-requests' in section['options']:
             continue
 
         # Find the project's repo
