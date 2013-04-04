@@ -146,7 +146,7 @@ def copy_acl_config(project, repo_path, acl_config):
     status, _ = run_command("cp %s %s" %
                             (acl_config, acl_dest), status=True)
     if status == 0:
-        status = git_command(repo_path, "diff-index --quiet HEAD --")
+        status = git_command(repo_path, "diff --quiet")
         if status != 0:
             return True
     return False
