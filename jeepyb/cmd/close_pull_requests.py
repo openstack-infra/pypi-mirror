@@ -44,7 +44,7 @@ import os
 import yaml
 import logging
 
-MESSAGE = """Thank you for contributing to OpenStack!
+MESSAGE = """Thank you for contributing to %(project)s!
 
 %(project)s uses Gerrit for code review.
 
