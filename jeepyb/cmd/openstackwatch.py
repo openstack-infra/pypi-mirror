@@ -87,7 +87,7 @@ def debug(msg):
 
 
 def get_javascript(project=None):
-    url = "%s?q=status:open" % CONFIG['json_url']
+    url = CONFIG['json_url']
     if project:
         url += "+project:" + project
     fp = urllib.urlretrieve(url)

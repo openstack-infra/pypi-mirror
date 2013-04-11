@@ -10,10 +10,10 @@ json_url = https://review.openstack.org/query?q=status:open
 # Allow different mode to output to swift, by default 'combined' will
 # combined all rss in one and 'multiple' will upload all the projects
 # in each rss file.
-output_mode = combined
+output_mode = multiple
 
 # username to your swift cluster
-[swift]
+# [swift]
 # username/tenant for swift with 2.0 or just username with 1.0 (i.e:
 # RAX).
 # username =
