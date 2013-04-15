@@ -274,3 +274,6 @@ def main():
     # Process bugtasks found in git log
     for bugtask in find_bugs(launchpad, git_log, args):
         process_bugtask(launchpad, bugtask, git_log, args)
+
+if __name__ == "__main__":
+    main()

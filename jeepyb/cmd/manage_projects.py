@@ -390,3 +390,6 @@ project=%s
                     run_command("rm -fr %s" % tmpdir)
     finally:
         os.unlink(ssh_env['GIT_SSH'])
+
+if __name__ == "__main__":
+    main()

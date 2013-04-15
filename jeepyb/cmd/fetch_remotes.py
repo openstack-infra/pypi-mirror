@@ -77,3 +77,6 @@ def main():
         run_command("git remote add -f upstream %s" % remote_url)
         # Fetch new revs from it
         run_command("git remote update upstream")
+
+if __name__ == "__main__":
+    main()

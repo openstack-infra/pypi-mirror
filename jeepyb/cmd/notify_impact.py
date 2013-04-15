@@ -89,3 +89,6 @@ def main():
     # Process impacts found in git log
     if impacted(git_log, args.impact):
         process_impact(git_log, args)
+
+if __name__ == "__main__":
+    main()

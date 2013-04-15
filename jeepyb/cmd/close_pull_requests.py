@@ -100,3 +100,6 @@ def main():
                                        completed=True)
             issue.create_comment(MESSAGE % vars)
             req.edit(state="closed")
+
+if __name__ == "__main__":
+    main()

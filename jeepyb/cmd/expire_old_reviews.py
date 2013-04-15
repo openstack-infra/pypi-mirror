@@ -102,3 +102,6 @@ def main():
                     break
 
     logger.info('End expire review')
+
+if __name__ == "__main__":
+    main()

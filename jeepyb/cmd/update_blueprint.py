@@ -140,3 +140,6 @@ def main():
     conn = MySQLdb.connect(user=DB_USER, passwd=DB_PASS, db=DB_DB)
 
     find_specs(launchpad, conn, args)
+
+if __name__ == "__main__":
+    main()

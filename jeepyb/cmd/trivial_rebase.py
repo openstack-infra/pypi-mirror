@@ -278,3 +278,6 @@ def main():
                               approve_category, score, options.commit]
         SuExec(options, approval["account_id"], ' '.join(gerrit_approve_cmd))
     sys.exit(0)
+
+if __name__ == "__main__":
+    main()
