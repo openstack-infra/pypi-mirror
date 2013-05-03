@@ -21,6 +21,7 @@
 #   gerrit-host: review.openstack.org
 #   local-git-dir: /var/lib/git
 #   gerrit-key: /home/gerrit2/review_site/etc/ssh_host_rsa_key
+#   has-github: True
 #   has-wiki: False
 #   has-issues: False
 #   has-downloads: False
@@ -227,21 +228,13 @@ def make_ssh_wrapper(gerrit_user, gerrit_key):
     return dict(GIT_SSH=name)
 
 
-def main():
-
-    PROJECTS_YAML = os.environ.get('PROJECTS_YAML',
-                                   '/home/gerrit2/projects.yaml')
-    configs = [config for config in yaml.load_all(open(PROJECTS_YAML))]
-    defaults = configs[0][0]
+def create_github_project(defaults, options, project, description, homepage):
     default_has_issues = defaults.get('has-issues', False)
     default_has_downloads = defaults.get('has-downloads', False)
     default_has_wiki = defaults.get('has-wiki', False)
-
-    LOCAL_GIT_DIR = defaults.get('local-git-dir', '/var/lib/git')
-    ACL_DIR = defaults.get('acl-dir')
-    GERRIT_HOST = defaults.get('gerrit-host')
-    GERRIT_USER = defaults.get('gerrit-user')
-    GERRIT_KEY = defaults.get('gerrit-key')
+    has_issues = 'has-issues' in options or default_has_issues
+    has_downloads = 'has-downloads' in options or default_has_downloads
+    has_wiki = 'has-wiki' in options or default_has_wiki
 
     GITHUB_SECURE_CONFIG = defaults.get(
         'github-config',
@@ -255,6 +248,56 @@ def main():
                          secure_config.get("github", "password"))
     orgs = ghub.get_user().get_orgs()
     orgs_dict = dict(zip([o.login.lower() for o in orgs], orgs))
+
+    # Find the project's repo
+    project_split = project.split('/', 1)
+    org_name = project_split[0]
+    if len(project_split) > 1:
+        repo_name = project_split[1]
+    else:
+        repo_name = project
+
+    try:
+        org = orgs_dict[org_name.lower()]
+    except KeyError:
+        # We do not have control of this github org ignore the project.
+        continue
+    try:
+        repo = org.get_repo(repo_name)
+    except github.GithubException:
+        repo = org.create_repo(repo_name,
+                               homepage=homepage,
+                               has_issues=has_issues,
+                               has_downloads=has_downloads,
+                               has_wiki=has_wiki)
+    if description:
+        repo.edit(repo_name, description=description)
+    if homepage:
+        repo.edit(repo_name, homepage=homepage)
+
+    repo.edit(repo_name, has_issues=has_issues,
+              has_downloads=has_downloads,
+              has_wiki=has_wiki)
+
+    if 'gerrit' not in [team.name for team in repo.get_teams()]:
+        teams = org.get_teams()
+        teams_dict = dict(zip([t.name.lower() for t in teams], teams))
+        teams_dict['gerrit'].add_to_repos(repo)
+
+
+def main():
+
+    PROJECTS_YAML = os.environ.get('PROJECTS_YAML',
+                                   '/home/gerrit2/projects.yaml')
+    configs = [config for config in yaml.load_all(open(PROJECTS_YAML))]
+    defaults = configs[0][0]
+    default_has_github = defaults.get('has-github', True)
+
+    LOCAL_GIT_DIR = defaults.get('local-git-dir', '/var/lib/git')
+    ACL_DIR = defaults.get('acl-dir')
+    GERRIT_HOST = defaults.get('gerrit-host')
+    GERRIT_USER = defaults.get('gerrit-user')
+    GERRIT_KEY = defaults.get('gerrit-key')
 
     gerrit = gerritlib.gerrit.Gerrit('localhost',
                                      GERRIT_USER,
@@ -274,41 +317,9 @@ def main():
             project_git = "%s.git" % project
             project_dir = os.path.join(LOCAL_GIT_DIR, project_git)
 
-            # Find the project's repo
-            project_split = project.split('/', 1)
-            if len(project_split) > 1:
-                repo_name = project_split[1]
-            else:
-                repo_name = project
-            has_issues = 'has-issues' in options or default_has_issues
-            has_downloads = 'has-downloads' in options or default_has_downloads
-            has_wiki = 'has-wiki' in options or default_has_wiki
-            try:
-                org = orgs_dict[project_split[0].lower()]
-            except KeyError:
-                # We do not have control of this github org ignore the project.
-                continue
-            try:
-                repo = org.get_repo(repo_name)
-            except github.GithubException:
-                repo = org.create_repo(repo_name,
-                                       homepage=homepage,
-                                       has_issues=has_issues,
-                                       has_downloads=has_downloads,
-                                       has_wiki=has_wiki)
-            if description:
-                repo.edit(repo_name, description=description)
-            if homepage:
-                repo.edit(repo_name, homepage=homepage)
-
-            repo.edit(repo_name, has_issues=has_issues,
-                      has_downloads=has_downloads,
-                      has_wiki=has_wiki)
-
-            if 'gerrit' not in [team.name for team in repo.get_teams()]:
-                teams = org.get_teams()
-                teams_dict = dict(zip([t.name.lower() for t in teams], teams))
-                teams_dict['gerrit'].add_to_repos(repo)
+            if 'has-github' in options or default_has_github:
+                create_github_project(defaults, options, project,
+                                      description, homepage)
 
             remote_url = "ssh://localhost:29418/%s" % project
             if project not in project_list:
