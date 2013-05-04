@@ -261,7 +261,7 @@ def create_github_project(defaults, options, project, description, homepage):
         org = orgs_dict[org_name.lower()]
     except KeyError:
         # We do not have control of this github org ignore the project.
-        continue
+        return
     try:
         repo = org.get_repo(repo_name)
     except github.GithubException:
