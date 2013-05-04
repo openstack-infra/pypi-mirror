@@ -137,14 +137,27 @@ def short_project(full_project_name):
 def git2lp(full_project_name):
     """Convert Git repo name to Launchpad project"""
     project_map = {
-        'openstack/openstack-ci-puppet': 'openstack-ci',
-        'openstack-ci/devstack-gate': 'openstack-ci',
-        'openstack-ci/gerrit': 'openstack-ci',
-        'openstack-ci/lodgeit': 'openstack-ci',
-        'openstack-ci/meetbot': 'openstack-ci',
-        'openstack-ci/jeepyb': 'openstack-ci',
         'openstack/api-site': 'openstack-api-site',
         'openstack/oslo-incubator': 'oslo',
+        'openstack-infra/askbot-theme': 'openstack-ci',
+        'openstack-infra/config': 'openstack-ci',
+        'openstack-infra/devstack-gate': 'openstack-ci',
+        'openstack-infra/gear': 'openstack-ci',
+        'openstack-infra/gerrit': 'openstack-ci',
+        'openstack-infra/gerritbot': 'openstack-ci',
+        'openstack-infra/gerritlib': 'openstack-ci',
+        'openstack-infra/gitdm': 'openstack-ci',
+        'openstack-infra/jeepyb': 'openstack-ci',
+        'openstack-infra/jenkins-job-builder': 'openstack-ci',
+        'openstack-infra/lodgeit': 'openstack-ci',
+        'openstack-infra/meetbot': 'openstack-ci',
+        'openstack-infra/nose-html-output': 'openstack-ci',
+        'openstack-infra/puppet-apparmor': 'openstack-ci',
+        'openstack-infra/puppet-dashboard': 'openstack-ci',
+        'openstack-infra/puppet-vcsrepo': 'openstack-ci',
+        'openstack-infra/reviewday': 'openstack-ci',
+        'openstack-infra/statusbot': 'openstack-ci',
+        'openstack-infra/zmq-event-publisher': 'openstack-ci',
     }
     return project_map.get(full_project_name, short_project(full_project_name))
 
