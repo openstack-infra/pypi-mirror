@@ -21,6 +21,7 @@
 #   gerrit-host: review.openstack.org
 #   local-git-dir: /var/lib/git
 #   gerrit-key: /home/gerrit2/review_site/etc/ssh_host_rsa_key
+#   gerrit-committer: Project Creator <openstack-infra@lists.openstack.org>
 #   has-github: True
 #   has-wiki: False
 #   has-issues: False
@@ -153,9 +154,8 @@ def copy_acl_config(project, repo_path, acl_config):
     return False
 
 
-def push_acl_config(project, remote_url, repo_path, env={}):
-    cmd = "commit -a -m'Update project config.' --author='Openstack Project " \
-          "Creator <openstack-infra@lists.openstack.org>'"
+def push_acl_config(project, remote_url, repo_path, gitid, env={}):
+    cmd = "commit -a -m'Update project config.' --author='%s'" % gitid
     status = git_command(repo_path, cmd)
     if status != 0:
         print "Failed to commit config for project: %s" % project
@@ -298,6 +298,7 @@ def main():
     GERRIT_HOST = defaults.get('gerrit-host')
     GERRIT_USER = defaults.get('gerrit-user')
     GERRIT_KEY = defaults.get('gerrit-key')
+    GERRIT_GITID = defaults.get('gerrit-committer')
 
     gerrit = gerritlib.gerrit.Gerrit('localhost',
                                      GERRIT_USER,
@@ -346,9 +347,8 @@ port=29418
 project=%s
 """ % (GERRIT_HOST, project_git))
                         git_command(repo_path, "add .gitreview")
-                        cmd = "commit -a -m'Added .gitreview' --author=" \
-                              "'Openstack Project Creator " \
-                              "<openstack-infra@lists.openstack.org>'"
+                        cmd = ("commit -a -m'Added .gitreview' --author='%s'"
+                               % GERRIT_GITID)
                         git_command(repo_path, cmd)
                         push_string = "push --all %s"
                     gerrit.createProject(project)
@@ -396,6 +396,7 @@ project=%s
                         push_acl_config(project,
                                         remote_url,
                                         repo_path,
+                                        GERRIT_GITID,
                                         ssh_env)
                 finally:
                     run_command("rm -fr %s" % tmpdir)
