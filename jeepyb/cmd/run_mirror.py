@@ -70,6 +70,8 @@ class Mirror(object):
     def __init__(self):
         parser = argparse.ArgumentParser(
             description='Build a pypi mirror from requirements')
+        parser.add_argument('-b', dest='branch',
+                            help='restrict run to a specified branch')
         parser.add_argument('-c', dest='config',
                             help='specify the config file')
         parser.add_argument('-n', dest='noop', action='store_true',
@@ -189,7 +191,11 @@ class Mirror(object):
                                     short_project))
             out = self.run_command("git fetch -p origin")
 
-            for branch in self.run_command("git branch -a").split("\n"):
+            if self.args.branch:
+                branches = [self.args.branch]
+            else:
+                branches = self.run_command("git branch -a").split("\n")
+            for branch in branches:
                 branch = branch.strip()
                 if (not branch.startswith("remotes/origin")
                         or "origin/HEAD" in branch):
