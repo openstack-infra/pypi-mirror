@@ -158,6 +158,15 @@ def git2lp(full_project_name):
         'openstack-infra/reviewday': 'openstack-ci',
         'openstack-infra/statusbot': 'openstack-ci',
         'openstack-infra/zmq-event-publisher': 'openstack-ci',
+        'stackforge/puppet-ceilometer': 'puppet-openstack',
+        'stackforge/puppet-cinder': 'puppet-openstack',
+        'stackforge/puppet-glance': 'puppet-openstack',
+        'stackforge/puppet-horizon': 'puppet-openstack',
+        'stackforge/puppet-keystone': 'puppet-openstack',
+        'stackforge/puppet-nova': 'puppet-openstack',
+        'stackforge/puppet-openstack_dev_env': 'puppet-openstack',
+        'stackforge/puppet-quantum': 'puppet-openstack',
+        'stackforge/puppet-swift': 'puppet-openstack',
     }
     return project_map.get(full_project_name, short_project(full_project_name))
 
