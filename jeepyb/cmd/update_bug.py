@@ -180,6 +180,7 @@ def git2lp(full_project_name):
         'stackforge/puppet-openstack_dev_env': 'puppet-openstack',
         'stackforge/puppet-quantum': 'puppet-openstack',
         'stackforge/puppet-swift': 'puppet-openstack',
+        'stackforge/puppet-tempest': 'puppet-openstack',
         'stackforge/tripleo-image-elements': 'tripleo',
     }
     return project_map.get(full_project_name, short_project(full_project_name))
