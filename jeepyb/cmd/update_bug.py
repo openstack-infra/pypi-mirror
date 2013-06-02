@@ -17,14 +17,15 @@
 # patchsets for strings like "bug FOO" and updates corresponding Launchpad
 # bugs status.
 
-from launchpadlib.launchpad import Launchpad
-from launchpadlib.uris import LPNET_SERVICE_ROOT
-import jeepyb.gerritdb
-import os
 import argparse
+import os
 import re
 import subprocess
 
+from launchpadlib import launchpad
+from launchpadlib import uris
+
+import jeepyb.gerritdb
 
 BASE_DIR = '/home/gerrit2/review_site'
 GERRIT_CACHE_DIR = os.path.expanduser(
@@ -98,28 +99,28 @@ def set_in_progress(bugtask, launchpad, uploader, change_url):
 
 
 def set_fix_committed(bugtask):
-    """Set bug fix committed"""
+    """Set bug fix committed."""
 
     bugtask.status = "Fix Committed"
     bugtask.lp_save()
 
 
 def set_fix_released(bugtask):
-    """Set bug fix released"""
+    """Set bug fix released."""
 
     bugtask.status = "Fix Released"
     bugtask.lp_save()
 
 
 def release_fixcommitted(bugtask):
-    """Set bug FixReleased if it was FixCommitted"""
+    """Set bug FixReleased if it was FixCommitted."""
 
     if bugtask.status == u'Fix Committed':
         set_fix_released(bugtask)
 
 
 def tag_in_branchname(bugtask, branch):
-    """Tag bug with in-branch-name tag (if name is appropriate)"""
+    """Tag bug with in-branch-name tag (if name is appropriate)."""
 
     lp_bug = bugtask.bug
     branch_name = branch.replace('/', '-')
@@ -130,12 +131,12 @@ def tag_in_branchname(bugtask, branch):
 
 
 def short_project(full_project_name):
-    """Return the project part of the git repository name"""
+    """Return the project part of the git repository name."""
     return full_project_name.split('/')[-1]
 
 
 def git2lp(full_project_name):
-    """Convert Git repo name to Launchpad project"""
+    """Convert Git repo name to Launchpad project."""
     project_map = {
         'openstack/api-site': 'openstack-api-site',
         'openstack/quantum': 'neutron',
@@ -278,7 +279,7 @@ def process_bugtask(launchpad, bugtask, git_log, args):
 
 
 def find_bugs(launchpad, git_log, args):
-    """Find bugs referenced in the git log and return related bugtasks"""
+    """Find bugs referenced in the git log and return related bugtasks."""
 
     bug_regexp = r'([Bb]ug|[Ll][Pp])[\s#:]*(\d+)'
     tokens = re.split(bug_regexp, git_log)
@@ -301,7 +302,7 @@ def find_bugs(launchpad, git_log, args):
 
 
 def extract_git_log(args):
-    """Extract git log of all merged commits"""
+    """Extract git log of all merged commits."""
     cmd = ['git',
            '--git-dir=' + BASE_DIR + '/git/' + args.project + '.git',
            'log', '--no-merges', args.commit + '^1..' + args.commit]
@@ -326,17 +327,16 @@ def main():
     args = parser.parse_args()
 
     # Connect to Launchpad
-    launchpad = Launchpad.login_with('Gerrit User Sync', LPNET_SERVICE_ROOT,
-                                     GERRIT_CACHE_DIR,
-                                     credentials_file=GERRIT_CREDENTIALS,
-                                     version='devel')
+    lpconn = launchpad.Launchpad.login_with(
+        'Gerrit User Sync', uris.LPNET_SERVICE_ROOT, GERRIT_CACHE_DIR,
+        credentials_file=GERRIT_CREDENTIALS, version='devel')
 
     # Get git log
     git_log = extract_git_log(args)
 
     # Process bugtasks found in git log
-    for bugtask in find_bugs(launchpad, git_log, args):
-        process_bugtask(launchpad, bugtask, git_log, args)
+    for bugtask in find_bugs(lpconn, git_log, args):
+        process_bugtask(lpconn, bugtask, git_log, args)
 
 if __name__ == "__main__":
     main()

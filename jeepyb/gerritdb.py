@@ -30,7 +30,7 @@ db_connection = None
 
 
 def get_broken_config(filename):
-    """ gerrit config ini files are broken and have leading tabs """
+    """gerrit config ini files are broken and have leading tabs."""
     text = ""
     for line in open(filename, "r"):
         text += line.lstrip()

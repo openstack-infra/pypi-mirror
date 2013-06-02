@@ -1,8 +1,0 @@
-distribute>=0.6.24
-
-fixtures
-pep8==1.3
-pyflakes
-python-subunit
-sphinx>=1.1.2
-testtools

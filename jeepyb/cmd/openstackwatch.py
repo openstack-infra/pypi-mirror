@@ -19,13 +19,14 @@
 # path to a configuration file.
 # -*- encoding: utf-8 -*-
 __author__ = "Chmouel Boudjnah <chmouel@chmouel.com>"
-import json
+
+import ConfigParser
+import cStringIO
 import datetime
+import json
 import os
 import sys
 import time
-import cStringIO
-import ConfigParser
 import urllib
 
 import PyRSS2Gen
@@ -108,7 +109,7 @@ def parse_javascript(javascript):
 
 
 def upload_rss(xml, output_object):
-    if not 'swift' in CONFIG:
+    if 'swift' not in CONFIG:
         print xml
         return
 

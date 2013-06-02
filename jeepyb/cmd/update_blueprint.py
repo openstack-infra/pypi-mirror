@@ -17,15 +17,15 @@
 # patchsets for strings like "blueprint FOO" or "bp FOO" and updates
 # corresponding Launchpad blueprints with links back to the change.
 
-from launchpadlib.launchpad import Launchpad
-from launchpadlib.uris import LPNET_SERVICE_ROOT
-import os
 import argparse
+import ConfigParser
+import os
 import re
+import StringIO
 import subprocess
 
-import StringIO
-import ConfigParser
+from launchpadlib import launchpad
+from launchpadlib import uris
 import MySQLdb
 
 BASE_DIR = '/home/gerrit2/review_site'
@@ -45,7 +45,7 @@ BODY_RE = re.compile(r'^\s+.*$')
 
 
 def get_broken_config(filename):
-    """ gerrit config ini files are broken and have leading tabs """
+    """gerrit config ini files are broken and have leading tabs."""
     text = ""
     with open(filename, "r") as conf:
         for line in conf.readlines():
@@ -132,14 +132,13 @@ def main():
 
     args = parser.parse_args()
 
-    launchpad = Launchpad.login_with('Gerrit User Sync', LPNET_SERVICE_ROOT,
-                                     GERRIT_CACHE_DIR,
-                                     credentials_file=GERRIT_CREDENTIALS,
-                                     version='devel')
+    lpconn = launchpad.Launchpad.login_with(
+        'Gerrit User Sync', uris.LPNET_SERVICE_ROOT, GERRIT_CACHE_DIR,
+        credentials_file=GERRIT_CREDENTIALS, version='devel')
 
     conn = MySQLdb.connect(user=DB_USER, passwd=DB_PASS, db=DB_DB)
 
-    find_specs(launchpad, conn, args)
+    find_specs(lpconn, conn, args)
 
 if __name__ == "__main__":
     main()

@@ -17,10 +17,10 @@
 # using the following rules:
 # 1. if negative comment and no activity in 1 week, expire
 
-import paramiko
+import argparse
 import json
 import logging
-import argparse
+import paramiko
 
 logger = logging.getLogger('expire_reviews')
 logger.setLevel(logging.INFO)

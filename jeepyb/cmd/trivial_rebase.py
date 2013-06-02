@@ -98,7 +98,7 @@ def Gssh(options, api_command):
 
 
 def GsqlQuery(sql_query, options):
-    """Runs a gerrit gsql query and returns the result"""
+    """Runs a gerrit gsql query and returns the result."""
     gsql_cmd = "gerrit gsql --format JSON -c %s" % sql_query
     gsql_out = Gssh(options, gsql_cmd)
     new_out = gsql_out.replace('}}\n', '}}\nsplit here\n')
@@ -106,7 +106,7 @@ def GsqlQuery(sql_query, options):
 
 
 def FindPrevRev(options):
-    """Finds the revision of the previous patch set on the change"""
+    """Finds the revision of the previous patch set on the change."""
     sql_query = ("\"SELECT revision FROM patch_sets,changes WHERE "
                  "patch_sets.change_id = changes.change_id AND "
                  "patch_sets.patch_set_id = %s AND "
@@ -119,9 +119,10 @@ def FindPrevRev(options):
 
 
 def GetApprovals(options):
-    """Get all the approvals on a specific patch set
+    """Get all the approvals on a specific patch set.
 
-    Returns a list of approval dicts"""
+    Returns a list of approval dicts
+    """
     sql_query = ("\"SELECT value,account_id,category_id"
                  " FROM patch_set_approvals"
                  " WHERE patch_set_id = %s"

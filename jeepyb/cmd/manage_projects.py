@@ -55,8 +55,8 @@ import subprocess
 import tempfile
 import yaml
 
-import github
 import gerritlib.gerrit
+import github
 
 import jeepyb.gerritdb
 
