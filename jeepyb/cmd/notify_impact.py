@@ -18,11 +18,14 @@
 # bugs status.
 
 import argparse
+import os
 import re
 import subprocess
 import smtplib
 
 from email.mime.text import MIMEText
+from launchpadlib.launchpad import Launchpad
+from launchpadlib.uris import LPNET_SERVICE_ROOT
 
 BASE_DIR = '/home/gerrit2/review_site'
 EMAIL_TEMPLATE = """
@@ -33,11 +36,58 @@ Hi, I'd like you to take a look at this patch for potential
 Log:
 %s
 """
+DOC_EMAIL_TEMPLATE = """
+Hi, I'd like you to take a look at this patch for potential
+%s.
+%s
+
+Log:
+%s
+Automatically generated bug (please review):
+%s
+"""
+GERRIT_CACHE_DIR = os.path.expanduser(
+    os.environ.get('GERRIT_CACHE_DIR',
+                   '~/.launchpadlib/cache'))
+GERRIT_CREDENTIALS = os.path.expanduser(
+    os.environ.get('GERRIT_CREDENTIALS',
+                   '~/.launchpadlib/creds'))
 
 
 def process_impact(git_log, args):
-    """Notify mail list of impact"""
-    email_content = EMAIL_TEMPLATE % (args.impact, args.change_url, git_log)
+    """
+    If the 'DocImpact' flag is present, create a new documentation bug in
+    the openstack-manuals launchpad project based on the git_log, then
+    (and for non-documentation impacts) notify the mailing list of impact
+    """
+    if args.dest_address.lower == 'docimpact':
+        launchpad = Launchpad.login_with('Gerrit User Sync',
+                                         LPNET_SERVICE_ROOT,
+                                         GERRIT_CACHE_DIR,
+                                         credentials_file=GERRIT_CREDENTIALS,
+                                         version='devel')
+        lines_in_log = git_log.split("\n")
+        bug_title = lines_in_log[4]
+        bug_descr = git_log
+        project_name = 'openstack-manuals'
+        project = launchpad.projects[project_name]
+
+        # check for existing bugs by searching for the title, to avoid
+        # creating multiple bugs per review
+        potential_dupes = project.searchTasks(search_text=bug_title)
+
+        if len(potential_dupes) == 0:
+            buginfo = launchpad.bugs.createBug(target=project,
+                                               title=bug_title,
+                                               description=bug_descr)
+            buglink = buginfo.web_link
+            email_content = DOC_EMAIL_TEMPLATE % (args.impact,
+                                                  args.change_url,
+                                                  git_log, buglink)
+    else:
+        email_content = EMAIL_TEMPLATE % (args.impact,
+                                          args.change_url, git_log)
+
     msg = MIMEText(email_content)
     msg['Subject'] = '[%s] %s review request change %s' % \
         (args.project, args.impact, args.change)
