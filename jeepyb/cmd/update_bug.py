@@ -182,6 +182,7 @@ def git2lp(full_project_name):
         'stackforge/puppet-quantum': 'puppet-openstack',
         'stackforge/puppet-swift': 'puppet-openstack',
         'stackforge/puppet-tempest': 'puppet-openstack',
+        'stackforge/tripleo-heat-templates': 'tripleo',
         'stackforge/tripleo-image-elements': 'tripleo',
     }
     return project_map.get(full_project_name, short_project(full_project_name))
@@ -220,6 +221,7 @@ def is_direct_release(full_project_name):
         'stackforge/cookbook-openstack-ops-messaging',
         'stackforge/cookbook-openstack-orchestration',
         'stackforge/openstack-chef-repo',
+        'stackforge/tripleo-heat-templates',
         'stackforge/tripleo-image-elements',
     ]
 
