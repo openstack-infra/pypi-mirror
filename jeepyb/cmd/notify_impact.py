@@ -60,7 +60,7 @@ def process_impact(git_log, args):
     the openstack-manuals launchpad project based on the git_log, then
     (and for non-documentation impacts) notify the mailing list of impact
     """
-    if args.dest_address.lower == 'docimpact':
+    if args.impact.lower() == 'docimpact':
         launchpad = Launchpad.login_with('Gerrit User Sync',
                                          LPNET_SERVICE_ROOT,
                                          GERRIT_CACHE_DIR,
