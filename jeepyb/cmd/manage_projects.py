@@ -299,6 +299,8 @@ def main():
     GERRIT_USER = defaults.get('gerrit-user')
     GERRIT_KEY = defaults.get('gerrit-key')
     GERRIT_GITID = defaults.get('gerrit-committer')
+    GERRIT_SYSTEM_USER = defaults.get('gerrit-system-user', 'gerrit2')
+    GERRIT_SYSTEM_GROUP = defaults.get('gerrit-system-group', 'gerrit2')
 
     gerrit = gerritlib.gerrit.Gerrit('localhost',
                                      GERRIT_USER,
@@ -355,8 +357,9 @@ project=%s
 
                     if not os.path.exists(project_dir):
                         run_command("git --bare init %s" % project_dir)
-                        run_command("chown -R gerrit2:gerrit2 %s"
-                                    % project_dir)
+                        run_command("chown -R %s:%s %s"
+                                    % (GERRIT_SYSTEM_USER, GERRIT_SYSTEM_GROUP,
+                                       project_dir))
 
                     git_command(repo_path,
                                 push_string % remote_url,
