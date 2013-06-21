@@ -296,6 +296,7 @@ def main():
     LOCAL_GIT_DIR = defaults.get('local-git-dir', '/var/lib/git')
     ACL_DIR = defaults.get('acl-dir')
     GERRIT_HOST = defaults.get('gerrit-host')
+    GERRIT_PORT = defaults.get('gerrit-port', '29418')
     GERRIT_USER = defaults.get('gerrit-user')
     GERRIT_KEY = defaults.get('gerrit-key')
     GERRIT_GITID = defaults.get('gerrit-committer')
@@ -304,7 +305,7 @@ def main():
 
     gerrit = gerritlib.gerrit.Gerrit('localhost',
                                      GERRIT_USER,
-                                     29418,
+                                     GERRIT_PORT,
                                      GERRIT_KEY)
     project_list = gerrit.listProjects()
     ssh_env = make_ssh_wrapper(GERRIT_USER, GERRIT_KEY)
@@ -324,7 +325,7 @@ def main():
                 create_github_project(defaults, options, project,
                                       description, homepage)
 
-            remote_url = "ssh://localhost:29418/%s" % project
+            remote_url = "ssh://localhost:%s/%s" % (GERRIT_PORT, project)
             if project not in project_list:
                 tmpdir = tempfile.mkdtemp()
                 try:
@@ -345,9 +346,9 @@ def main():
                                   'w') as gitreview:
                             gitreview.write("""[gerrit]
 host=%s
-port=29418
+port=%s
 project=%s
-""" % (GERRIT_HOST, project_git))
+""" % (GERRIT_HOST, GERRIT_PORT, project_git))
                         git_command(repo_path, "add .gitreview")
                         cmd = ("commit -a -m'Added .gitreview' --author='%s'"
                                % GERRIT_GITID)
