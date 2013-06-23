@@ -68,7 +68,7 @@ def process_impact(git_log, args):
                                          version='devel')
         lines_in_log = git_log.split("\n")
         bug_title = lines_in_log[4]
-        bug_descr = git_log
+        bug_descr = args.change_url + '\n' + git_log
         project_name = 'openstack-manuals'
         project = launchpad.projects[project_name]
 
@@ -79,7 +79,8 @@ def process_impact(git_log, args):
         if len(potential_dupes) == 0:
             buginfo = launchpad.bugs.createBug(target=project,
                                                title=bug_title,
-                                               description=bug_descr)
+                                               description=bug_descr,
+                                               tags=args.project.split('/')[1])
             buglink = buginfo.web_link
             email_content = DOC_EMAIL_TEMPLATE % (args.impact,
                                                   args.change_url,
