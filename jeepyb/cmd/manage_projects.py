@@ -296,7 +296,7 @@ def main():
     LOCAL_GIT_DIR = defaults.get('local-git-dir', '/var/lib/git')
     ACL_DIR = defaults.get('acl-dir')
     GERRIT_HOST = defaults.get('gerrit-host')
-    GERRIT_PORT = defaults.get('gerrit-port', '29418')
+    GERRIT_PORT = int(defaults.get('gerrit-port', '29418'))
     GERRIT_USER = defaults.get('gerrit-user')
     GERRIT_KEY = defaults.get('gerrit-key')
     GERRIT_GITID = defaults.get('gerrit-committer')
