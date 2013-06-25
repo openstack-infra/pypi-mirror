@@ -15,8 +15,7 @@
 
 # This script is designed to expire old code reviews that have not been touched
 # using the following rules:
-# 1. if open and no activity in 2 weeks, expire
-# 2. if negative comment and no activity in 1 week, expire
+# 1. if negative comment and no activity in 1 week, expire
 
 import paramiko
 import json
@@ -27,16 +26,11 @@ logger = logging.getLogger('expire_reviews')
 logger.setLevel(logging.INFO)
 
 
-def expire_patch_set(ssh, patch_id, patch_subject, has_negative):
-    if has_negative:
-        message = ('code review expired after 1 week of no activity'
-                   ' after a negative review, it can be restored using'
-                   ' the \`Restore Change\` button under the Patch Set'
-                   ' on the web interface')
-    else:
-        message = ('code review expired after 2 weeks of no activity,'
-                   ' it can be restored using the \`Restore Change\` button '
-                   ' under the Patch Set on the web interface')
+def expire_patch_set(ssh, patch_id, patch_subject):
+    message = ('code review expired after 1 week of no activity'
+               ' after a negative review, it can be restored using'
+               ' the \`Restore Change\` button under the Patch Set'
+               ' on the web interface')
     command = ('gerrit review --abandon '
                '--message="{message}" {patch_id}').format(
                    message=message,
@@ -70,19 +64,6 @@ def main():
     ssh.connect('localhost', username=GERRIT_USER,
                 key_filename=GERRIT_SSH_KEY, port=29418)
 
-    # Query all open with no activity for 2 weeks
-    logger.info('Searching no activity for 2 weeks')
-    stdin, stdout, stderr = ssh.exec_command(
-        'gerrit query --current-patch-set --format JSON status:open age:2w')
-
-    for line in stdout:
-        row = json.loads(line)
-        if 'rowCount' not in row:
-            expire_patch_set(ssh,
-                             row['currentPatchSet']['revision'],
-                             row['subject'],
-                             False)
-
     # Query all reviewed with no activity for 1 week
     logger.info('Searching no activity on negative review for 1 week')
     stdin, stdout, stderr = ssh.exec_command(
@@ -97,8 +78,7 @@ def main():
                 if approval['value'] == '-1':
                     expire_patch_set(ssh,
                                      row['currentPatchSet']['revision'],
-                                     row['subject'],
-                                     True)
+                                     row['subject'])
                     break
 
     logger.info('End expire review')
