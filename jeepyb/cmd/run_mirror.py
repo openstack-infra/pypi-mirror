@@ -159,8 +159,7 @@ class Mirror(object):
         print("Building mirror: %s" % mirror['name'])
         pip_format = ("%s install -M -U %s --exists-action=w "
                       "--download-cache=%s --build %s -r %s")
-        venv_format = ("virtualenv --clear --distribute "
-                       "--extra-search-dir=%s %s")
+        venv_format = ("virtualenv --clear --extra-search-dir=%s %s")
 
         workdir = tempfile.mkdtemp()
         reqs = os.path.join(workdir, "reqs")
