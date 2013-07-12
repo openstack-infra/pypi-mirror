@@ -230,29 +230,76 @@ def is_direct_release(full_project_name):
     ]
 
 
-def process_bugtask(launchpad, bugtask, git_log, args):
-    """Apply changes to bugtask, based on hook / branch..."""
+class Task:
+    def __init__(self, lp_task, prefix):
+        '''Prefixes associated with bug references will allow for certain
+        changes to be made to the bug's launchpad (lp) page. The following
+        tokens represent the automation currently taking place.
+
+        ::
+        add_comment       -> Adds a comment to the bug's lp page.
+        set_in_progress   -> Sets the bug's lp status to 'In Progress'.
+        set_fix_released  -> Sets the bug's lp status to 'Fix Released'.
+        set_fix_committed -> Sets the bug's lp status to 'Fix Committed'.
+        ::
+
+        changes_needed, when populated, simply indicates the actions that are
+        available to be taken based on the value of 'prefix'.
+        '''
+        self.lp_task = lp_task
+        self.changes_needed = []
+
+        # If no prefix was matched, default to 'closes'.
+        prefix = prefix.split('-')[0].lower() if prefix else 'closes'
+
+        if prefix in ('closes', 'fixes', 'resolves'):
+            self.changes_needed.extend(('add_comment',
+                                        'set_in_progress',
+                                        'set_fix_committed',
+                                        'set_fix_released'))
+        elif prefix in ('partial',):
+            self.changes_needed.extend(('add_comment', 'set_in_progress'))
+        elif prefix in ('related', 'impacts', 'affects'):
+            self.changes_needed.extend(('add_comment',))
+        else:
+            # prefix is not recognized.
+            self.changes_needed.extend(('add_comment',))
+
+    def needs_change(self, change):
+        '''Return a boolean indicating if given 'change' needs to be made.'''
+        if change in self.changes_needed:
+            return True
+        else:
+            return False
+
+
+def process_bugtask(launchpad, task, git_log, args):
+    """Apply changes to lp bug tasks, based on hook / branch."""
+
+    bugtask = task.lp_task
 
     if args.hook == "change-merged":
         if args.branch == 'master':
-            if is_direct_release(args.project):
+            if (is_direct_release(args.project) and
+                    task.needs_change('set_fix_released')):
                 set_fix_released(bugtask)
             else:
-                if bugtask.status != u'Fix Released':
+                if (bugtask.status != u'Fix Released' and
+                        task.needs_change('set_fix_committed')):
                     set_fix_committed(bugtask)
         elif args.branch == 'milestone-proposed':
             release_fixcommitted(bugtask)
         elif args.branch.startswith('stable/'):
             series = args.branch[7:]
-            # Look for a related task matching the series
+            # Look for a related task matching the series.
             for reltask in bugtask.related_tasks:
                 if (reltask.bug_target_name.endswith("/" + series) and
-                        reltask.status != u'Fix Released'):
-                    # Use fixcommitted if there is any
+                        reltask.status != u'Fix Released' and
+                        task.needs_change('set_fix_committed')):
                     set_fix_committed(reltask)
                     break
             else:
-                # Use tagging if there isn't any
+                # Use tag_in_branchname if there isn't any.
                 tag_in_branchname(bugtask, args.branch)
 
         add_change_merged_message(bugtask, args.change_url, args.project,
@@ -261,13 +308,15 @@ def process_bugtask(launchpad, bugtask, git_log, args):
 
     if args.hook == "patchset-created":
         if args.branch == 'master':
-            if bugtask.status not in [u'Fix Committed', u'Fix Released']:
-                set_in_progress(bugtask, launchpad, args.uploader,
-                                args.change_url)
+            if (bugtask.status not in [u'Fix Committed', u'Fix Released'] and
+                    task.needs_change('set_in_progress')):
+                set_in_progress(bugtask, launchpad,
+                                args.uploader, args.change_url)
         elif args.branch.startswith('stable/'):
             series = args.branch[7:]
             for reltask in bugtask.related_tasks:
                 if (reltask.bug_target_name.endswith("/" + series) and
+                        task.needs_change('set_in_progress') and
                         reltask.status not in [u'Fix Committed',
                                                u'Fix Released']):
                     set_in_progress(reltask, launchpad,
@@ -280,23 +329,44 @@ def process_bugtask(launchpad, bugtask, git_log, args):
 
 
 def find_bugs(launchpad, git_log, args):
-    """Find bugs referenced in the git log and return related bugtasks."""
+    '''Find bugs referenced in the git log and return related tasks.
 
-    bug_regexp = r'([Bb]ug|[Ll][Pp])[\s#:]*(\d+)'
-    tokens = re.split(bug_regexp, git_log)
+    Our regular expression is composed of three major parts:
+    part1: Matches only at start-of-line (required). Optionally matches any
+           word or hyphen separated words.
+    part2: Matches the words 'bug' or 'lp' on a word boundry (required).
+    part3: Matches a whole number (required).
 
-    # Extract unique bug tasks
+    The following patterns will be matched properly:
+    bug # 555555
+    Closes-Bug: 555555
+    Fixes: bug # 555555
+    Resolves: bug 555555
+    Partial-Bug: lp bug # 555555
+
+    :returns: an iterable containing Task objects.
+    '''
+
+    part1 = r'^[\t ]*(?P<prefix>[-\w]+)?[\s:]*'
+    part2 = r'(?:\b(?:bug|lp)\b[\s#:]*)+'
+    part3 = r'(?P<bug_number>\d+)\s*?$'
+    regexp = part1 + part2 + part3
+    matches = re.finditer(regexp, git_log, flags=re.I | re.M)
+
+    # Extract unique bug tasks and associated prefixes.
     bugtasks = {}
-    for token in tokens:
-        if re.match('^\d+$', token) and (token not in bugtasks):
+    for match in matches:
+        prefix = match.group('prefix')
+        bug_num = match.group('bug_number')
+        if bug_num not in bugtasks:
             try:
-                lp_bug = launchpad.bugs[token]
+                lp_bug = launchpad.bugs[bug_num]
                 for lp_task in lp_bug.bug_tasks:
                     if lp_task.bug_target_name == git2lp(args.project):
-                        bugtasks[token] = lp_task
+                        bugtasks[bug_num] = Task(lp_task, prefix)
                         break
             except KeyError:
-                # Unknown bug
+                # Unknown bug.
                 pass
 
     return bugtasks.values()
@@ -313,31 +383,31 @@ def extract_git_log(args):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('hook')
-    #common
+    # common
     parser.add_argument('--change', default=None)
     parser.add_argument('--change-url', default=None)
     parser.add_argument('--project', default=None)
     parser.add_argument('--branch', default=None)
     parser.add_argument('--commit', default=None)
-    #change-merged
+    # change-merged
     parser.add_argument('--submitter', default=None)
-    #patchset-created
+    # patchset-created
     parser.add_argument('--uploader', default=None)
     parser.add_argument('--patchset', default=None)
 
     args = parser.parse_args()
 
-    # Connect to Launchpad
+    # Connect to Launchpad.
     lpconn = launchpad.Launchpad.login_with(
         'Gerrit User Sync', uris.LPNET_SERVICE_ROOT, GERRIT_CACHE_DIR,
         credentials_file=GERRIT_CREDENTIALS, version='devel')
 
-    # Get git log
+    # Get git log.
     git_log = extract_git_log(args)
 
-    # Process bugtasks found in git log
-    for bugtask in find_bugs(lpconn, git_log, args):
-        process_bugtask(lpconn, bugtask, git_log, args)
+    # Process tasks found in git log.
+    for task in find_bugs(lpconn, git_log, args):
+        process_bugtask(lpconn, task, git_log, args)
 
 if __name__ == "__main__":
     main()
