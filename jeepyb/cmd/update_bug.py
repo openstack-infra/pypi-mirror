@@ -196,7 +196,6 @@ def is_direct_release(full_project_name):
     return full_project_name in [
         'openstack/openstack-manuals',
         'openstack/api-site',
-        'openstack/tempest',
         'openstack-dev/devstack',
         'openstack-infra/askbot-theme',
         'openstack-infra/config',
