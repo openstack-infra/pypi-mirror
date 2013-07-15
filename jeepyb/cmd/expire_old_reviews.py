@@ -75,7 +75,7 @@ def main():
         if 'rowCount' not in row:
             # Search for negative approvals
             for approval in row['currentPatchSet']['approvals']:
-                if approval['value'] == '-1':
+                if approval['value'] in ('-1', '-2'):
                     expire_patch_set(ssh,
                                      row['currentPatchSet']['revision'],
                                      row['subject'])
