@@ -142,6 +142,7 @@ def git2lp(full_project_name):
         'openstack/quantum': 'neutron',
         'openstack/python-quantumclient': 'python-neutronclient',
         'openstack/oslo-incubator': 'oslo',
+        'openstack/tripleo-incubator': 'tripleo',
         'openstack-infra/askbot-theme': 'openstack-ci',
         'openstack-infra/config': 'openstack-ci',
         'openstack-infra/devstack-gate': 'openstack-ci',
@@ -196,6 +197,7 @@ def is_direct_release(full_project_name):
     return full_project_name in [
         'openstack/openstack-manuals',
         'openstack/api-site',
+        'openstack/tripleo-incubator',
         'openstack-dev/devstack',
         'openstack-infra/askbot-theme',
         'openstack-infra/config',
