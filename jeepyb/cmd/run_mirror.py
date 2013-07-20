@@ -223,6 +223,9 @@ class Mirror(object):
                     out = self.run_command(upgrade_format %
                                            (pip, pip_cache_dir,
                                             build, "pip"))
+                    out = self.run_command(upgrade_format %
+                                           (pip, pip_cache_dir,
+                                            build, "virtualenv"))
                     if os.path.exists(build):
                         shutil.rmtree(build)
                     new_reqs = self.process_http_requirements(reqlist,
