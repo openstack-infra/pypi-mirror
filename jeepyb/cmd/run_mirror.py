@@ -157,7 +157,7 @@ class Mirror(object):
 
     def build_mirror(self, mirror):
         print("Building mirror: %s" % mirror['name'])
-        pip_format = ("%s install -M -U %s --exists-action=w "
+        pip_format = ("%s install -U %s --exists-action=w "
                       "--download-cache=%s --build %s -r %s")
         venv_format = ("virtualenv --clear --extra-search-dir=%s %s")
         upgrade_format = ("%s install -U --exists-action=w "
