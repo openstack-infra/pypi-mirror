@@ -158,7 +158,7 @@ class Mirror(object):
     def build_mirror(self, mirror):
         print("Building mirror: %s" % mirror['name'])
         pip_format = ("%s install -M -U %s --exists-action=w "
-                      "--download-cache=%s --build %s -r %s")
+                      "--download-cache=%s --build %s %s")
         venv_format = ("virtualenv --clear --extra-search-dir=%s %s")
 
         workdir = tempfile.mkdtemp()
@@ -219,41 +219,39 @@ class Mirror(object):
                     new_reqs = self.process_http_requirements(reqlist,
                                                               pip_cache_dir,
                                                               pip)
-                    (reqfp, reqfn) = tempfile.mkstemp()
-                    os.write(reqfp, '\n'.join(new_reqs))
-                    os.close(reqfp)
+
+                    for req in new_reqs:
+                        out = self.run_command(pip_format %
+                                               (pip, "", pip_cache_dir,
+                                                build, req))
+                        if "\nSuccessfully installed " not in out:
+                            sys.stderr.write(
+                                "Installing pip requires for %s:%s "
+                                "failed.\n%s\n" % (project, branch, out))
+                            print("pip install did not indicate success")
+                    freeze = self.run_command("%s freeze -l" % pip)
+                    requires = self.find_pkg_info(build)
+                    reqfd = open(reqs, "w")
+                    for line in freeze.split("\n"):
+                        if line.startswith("-e ") or (
+                                "==" in line and " " not in line):
+                            requires.add(line)
+                    for r in requires:
+                        reqfd.write(r + "\n")
+                    reqfd.close()
+                    out = self.run_command(venv_format %
+                                           (pip_cache_dir, venv))
+                    if os.path.exists(build):
+                        shutil.rmtree(build)
                     out = self.run_command(pip_format %
-                                           (pip, "", pip_cache_dir,
-                                            build, reqfn))
-                    if "\nSuccessfully installed " not in out:
-                        sys.stderr.write("Installing pip requires for %s:%s "
-                                         "failed.\n%s\n" %
+                                           (pip, "--no-install",
+                                            pip_cache_dir, build, reqs))
+                    if "\nSuccessfully downloaded " not in out:
+                        sys.stderr.write("Downloading pip requires for "
+                                         "%s:%s failed.\n%s\n" %
                                          (project, branch, out))
                         print("pip install did not indicate success")
-                    else:
-                        freeze = self.run_command("%s freeze -l" % pip)
-                        requires = self.find_pkg_info(build)
-                        reqfd = open(reqs, "w")
-                        for line in freeze.split("\n"):
-                            if line.startswith("-e ") or (
-                                    "==" in line and " " not in line):
-                                requires.add(line)
-                        for r in requires:
-                            reqfd.write(r + "\n")
-                        reqfd.close()
-                        out = self.run_command(venv_format %
-                                               (pip_cache_dir, venv))
-                        if os.path.exists(build):
-                            shutil.rmtree(build)
-                        out = self.run_command(pip_format %
-                                               (pip, "--no-install",
-                                                pip_cache_dir, build, reqs))
-                        if "\nSuccessfully downloaded " not in out:
-                            sys.stderr.write("Downloading pip requires for "
-                                             "%s:%s failed.\n%s\n" %
-                                             (project, branch, out))
-                            print("pip install did not indicate success")
-                        print("cached:\n%s" % freeze)
+                    print("cached:\n%s" % freeze)
                 else:
                     print("no requirements")
         shutil.rmtree(workdir)
