@@ -50,6 +50,7 @@
 # makes it suitable for running in a cron job with only stdout
 # redirected to a log, and also avoids one broken project preventing
 # caching of requirements for others.
+from __future__ import print_function
 
 import argparse
 import datetime
@@ -122,7 +123,7 @@ class Mirror(object):
 
     def debug(self, msg):
         if self.args.debug:
-            print msg
+            print(msg)
 
     def process_http_requirements(self, reqlist, pip_cache_dir, pip):
         new_reqs = []
