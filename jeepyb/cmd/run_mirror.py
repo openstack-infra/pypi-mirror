@@ -160,6 +160,8 @@ class Mirror(object):
         pip_format = ("%s install -M -U %s --exists-action=w "
                       "--download-cache=%s --build %s -r %s")
         venv_format = ("virtualenv --clear --extra-search-dir=%s %s")
+        upgrade_format = ("%s install -U --exists-action=w "
+                          "--download-cache=%s --build %s %s")
 
         workdir = tempfile.mkdtemp()
         reqs = os.path.join(workdir, "reqs")
@@ -214,6 +216,12 @@ class Mirror(object):
                 if reqlist:
                     out = self.run_command(venv_format %
                                            (pip_cache_dir, venv))
+                    out = self.run_command(upgrade_format %
+                                           (pip, pip_cache_dir,
+                                            build, "setuptools"))
+                    out = self.run_command(upgrade_format %
+                                           (pip, pip_cache_dir,
+                                            build, "pip"))
                     if os.path.exists(build):
                         shutil.rmtree(build)
                     new_reqs = self.process_http_requirements(reqlist,
