@@ -18,6 +18,9 @@
 # for example hourly via cron. It takes an optional argument to specify the
 # path to a configuration file.
 # -*- encoding: utf-8 -*-
+
+from __future__ import print_function
+
 __author__ = "Chmouel Boudjnah <chmouel@chmouel.com>"
 
 import ConfigParser
@@ -84,7 +87,7 @@ CONFIG = parse_ini(conffile)
 
 def debug(msg):
     if DEBUG:
-        print msg
+        print(msg)
 
 
 def get_javascript(project=None):
@@ -110,7 +113,7 @@ def parse_javascript(javascript):
 
 def upload_rss(xml, output_object):
     if 'swift' not in CONFIG:
-        print xml
+        print(xml)
         return
 
     import swiftclient

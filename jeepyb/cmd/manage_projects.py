@@ -45,6 +45,7 @@
 #   acl-parameters:
 #     project: OTHER_PROJECT_NAME
 
+from __future__ import print_function
 
 import ConfigParser
 import logging
@@ -127,14 +128,14 @@ def fetch_config(project, remote_url, repo_path, env={}):
     status = git_command(repo_path, "fetch %s +refs/meta/config:"
                          "refs/remotes/gerrit-meta/config" % remote_url, env)
     if status != 0:
-        print "Failed to fetch refs/meta/config for project: %s" % project
+        print("Failed to fetch refs/meta/config for project: %s" % project)
         return False
     # Because the following fails if executed more than once you should only
     # run fetch_config once in each repo.
     status = git_command(repo_path, "checkout -b config "
                          "remotes/gerrit-meta/config")
     if status != 0:
-        print "Failed to checkout config for project: %s" % project
+        print("Failed to checkout config for project: %s" % project)
         return False
 
     return True
@@ -158,14 +159,14 @@ def push_acl_config(project, remote_url, repo_path, gitid, env={}):
     cmd = "commit -a -m'Update project config.' --author='%s'" % gitid
     status = git_command(repo_path, cmd)
     if status != 0:
-        print "Failed to commit config for project: %s" % project
+        print("Failed to commit config for project: %s" % project)
         return False
     status, out = git_command_output(repo_path,
                                      "push %s HEAD:refs/meta/config" %
                                      remote_url, env)
     if status != 0:
-        print "Failed to push config for project: %s" % project
-        print out
+        print("Failed to push config for project: %s" % project)
+        print(out)
         return False
     return True
 
@@ -212,7 +213,7 @@ def create_groups_file(project, gerrit, repo_path):
                 fp.write("%s\t%s\n" % (uuid, group))
     status = git_command(repo_path, "add groups")
     if status != 0:
-        print "Failed to add groups file for project: %s" % project
+        print("Failed to add groups file for project: %s" % project)
         return False
     return True
 
@@ -224,7 +225,7 @@ def make_ssh_wrapper(gerrit_user, gerrit_key):
              'ssh -i %s -l %s -o "StrictHostKeyChecking no" $@\n' %
              (gerrit_key, gerrit_user))
     os.close(fd)
-    os.chmod(name, 0755)
+    os.chmod(name, 0o755)
     return dict(GIT_SSH=name)
 
 
