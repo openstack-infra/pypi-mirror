@@ -80,14 +80,12 @@ def process_impact(git_log, args):
     """Process DocImpact flag.
 
     If the 'DocImpact' flag is present, create a new documentation bug in
-    the openstack-manuals launchpad project based on the git_log, then
-    (and for non-documentation impacts) notify the mailing list of impact,
-    unless a bug was created.
+    the openstack-manuals launchpad project based on the git_log.
+    For non-documentation impacts notify the mailing list of impact.
     """
     if args.impact.lower() == 'docimpact':
-        buglink = create_bug(git_log, args, 'openstack-manuals')
-        if buglink is not None:
-            return
+        create_bug(git_log, args, 'openstack-manuals')
+        return
 
     email_content = EMAIL_TEMPLATE % (args.impact,
                                       args.change_url, git_log)
