@@ -6,3 +6,4 @@ AUTHORS
 ChangeLog
 dist/*
 *.egg*
+.idea
