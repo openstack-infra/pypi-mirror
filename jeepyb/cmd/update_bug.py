@@ -179,6 +179,7 @@ def git2lp(full_project_name):
         'stackforge/puppet-ceilometer': 'puppet-openstack',
         'stackforge/puppet-cinder': 'puppet-openstack',
         'stackforge/puppet-glance': 'puppet-openstack',
+        'stackforge/puppet-heat': 'puppet-openstack',
         'stackforge/puppet-horizon': 'puppet-openstack',
         'stackforge/puppet-keystone': 'puppet-openstack',
         'stackforge/puppet-nova': 'puppet-openstack',
