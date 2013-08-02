@@ -208,7 +208,8 @@ class Mirror(object):
                     out = self.run_command("git reset --hard %s" % branch)
                     out = self.run_command("git clean -x -f -d -q")
                 reqlist = []
-                for requires_file in ("requirements.txt",
+                for requires_file in ("global-requirements.txt",
+                                      "requirements.txt",
                                       "test-requirements.txt",
                                       "tools/pip-requires",
                                       "tools/test-requires"):
