@@ -208,13 +208,15 @@ class Mirror(object):
                     out = self.run_command("git reset --hard %s" % branch)
                     out = self.run_command("git clean -x -f -d -q")
                 reqlist = []
-                for requires_file in ("global-requirements.txt",
-                                      "requirements.txt",
-                                      "test-requirements.txt",
-                                      "tools/pip-requires",
-                                      "tools/test-requires"):
-                    if os.path.exists(requires_file):
-                        reqlist.append(requires_file)
+                if os.path.exists('global-requirements.txt'):
+                    reqlist.append('global-requirements.txt')
+                else:
+                    for requires_file in ("requirements.txt",
+                                          "test-requirements.txt",
+                                          "tools/pip-requires",
+                                          "tools/test-requires"):
+                        if os.path.exists(requires_file):
+                            reqlist.append(requires_file)
                 if reqlist:
                     out = self.run_command(venv_format %
                                            (pip_cache_dir, venv))
