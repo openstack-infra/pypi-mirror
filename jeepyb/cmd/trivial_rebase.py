@@ -34,6 +34,8 @@
 # Documentation is available here:
 #   https://www.codeaurora.org/xwiki/bin/QAEP/Gerrit
 
+from __future__ import print_function
+
 import json
 import optparse
 import subprocess
@@ -70,7 +72,7 @@ def CheckCall(command, cwd=None):
     try:
         process = subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE)
         std_out, std_err = process.communicate()
-    except OSError, e:
+    except OSError as e:
         raise CheckCallError(command, cwd, e.errno, None)
     if process.returncode:
         raise CheckCallError(command, cwd, process.returncode,
@@ -269,7 +271,7 @@ def main():
             # Similarly squash old approvals
             continue
         else:
-            print "Unsupported category: %s" % approval
+            print("Unsupported category: %s" % approval)
             sys.exit(0)
 
         score = approval["value"]
