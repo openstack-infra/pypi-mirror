@@ -6,3 +6,4 @@ pyyaml
 pkginfo
 PyRSS2Gen
 python-swiftclient
+pip>=1.4

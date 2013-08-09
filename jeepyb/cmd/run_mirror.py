@@ -158,11 +158,25 @@ class Mirror(object):
 
     def build_mirror(self, mirror):
         print("Building mirror: %s" % mirror['name'])
-        pip_format = ("%s install -U %s --exists-action=w "
-                      "--download-cache=%s --build %s -r %s")
-        venv_format = ("virtualenv --clear --extra-search-dir=%s %s")
-        upgrade_format = ("%s install -U --exists-action=w "
-                          "--download-cache=%s --build %s %s")
+        pip_format = (
+            "%(pip)s install -U %(extra_args)s --exists-action=w --use-wheel"
+            " --download-cache=%(download_cache)s"
+            " --build %(build_dir)s -f %(find_links)s"
+            " -r %(requirements_file)s")
+        venv_format = (
+            "virtualenv --clear --extra-search-dir=%(extra_search_dir)s"
+            " %(venv_dir)s")
+        upgrade_format = (
+            "%(pip)s install -U --use-wheel --exists-action=w"
+            " --download-cache=%(download_cache)s --build %(build_dir)s"
+            " -f %(find_links)s %(requirement)s")
+        wheel_file_format = (
+            "%(pip)s wheel --download-cache=%(download_cache)s"
+            " --use-wheel --wheel-dir %(wheel_dir)s -f %(find_links)s"
+            " -r %(requirements_file)s")
+        wheel_format = (
+            "%(pip)s wheel --download-cache=%(download_cache)s"
+            " -f %(find_links)s --wheel-dir %(wheel_dir)s %(requirement)s")
 
         workdir = tempfile.mkdtemp()
         reqs = os.path.join(workdir, "reqs")
@@ -174,11 +188,11 @@ class Mirror(object):
                                          'projects')
         pip_cache_dir = os.path.join(self.config['cache-root'],
                                      'pip', mirror['name'])
+        wheelhouse = os.path.join(self.config['cache-root'], "wheelhouse")
         if not self.args.noop:
-            if not os.path.exists(project_cache_dir):
-                os.makedirs(project_cache_dir)
-            if not os.path.exists(pip_cache_dir):
-                os.makedirs(pip_cache_dir)
+            for new_dir in (project_cache_dir, pip_cache_dir, wheelhouse):
+                if not os.path.exists(new_dir):
+                    os.makedirs(new_dir)
 
         for project in mirror['projects']:
             print("Updating repository: %s" % project)
@@ -218,17 +232,31 @@ class Mirror(object):
                         if os.path.exists(requires_file):
                             reqlist.append(requires_file)
                 if reqlist:
-                    out = self.run_command(venv_format %
-                                           (pip_cache_dir, venv))
-                    out = self.run_command(upgrade_format %
-                                           (pip, pip_cache_dir,
-                                            build, "setuptools"))
-                    out = self.run_command(upgrade_format %
-                                           (pip, pip_cache_dir,
-                                            build, "pip"))
-                    out = self.run_command(upgrade_format %
-                                           (pip, pip_cache_dir,
-                                            build, "virtualenv"))
+                    out = self.run_command(
+                        venv_format % dict(
+                            extra_search_dir=pip_cache_dir, venv_dir=venv))
+                    # Need to do these separately. If you attempt to upgrade
+                    # setuptools with something else, you can get into a
+                    # situation where distribute has been upgraded, but pip
+                    # attemps to install something else before installing
+                    # the setuptools replacement. The safest thing is to
+                    # simply upgrade setuptools by itself.
+                    # There is a current theory that pip 1.4 may solve
+                    # the setuptools upgrade issues, so upgrading that first
+                    # is a good idea
+                    for requirement in [
+                            "pip", "setuptools", "wheel", "virtualenv"]:
+                        self.run_command(
+                            upgrade_format % dict(
+                                pip=pip, download_cache=pip_cache_dir,
+                                build_dir=build, find_links=wheelhouse,
+                                requirement=requirement))
+                    for requirement in ["pip", "setuptools", "virtualenv"]:
+                        self.run_command(
+                            wheel_format % dict(
+                                pip=pip, download_cache=pip_cache_dir,
+                                find_links=wheelhouse, wheel_dir=wheelhouse,
+                                requirement=requirement))
                     if os.path.exists(build):
                         shutil.rmtree(build)
                     new_reqs = self.process_http_requirements(reqlist,
@@ -237,9 +265,16 @@ class Mirror(object):
                     (reqfp, reqfn) = tempfile.mkstemp()
                     os.write(reqfp, '\n'.join(new_reqs))
                     os.close(reqfp)
-                    out = self.run_command(pip_format %
-                                           (pip, "", pip_cache_dir,
-                                            build, reqfn))
+                    out = self.run_command(
+                        wheel_file_format % dict(
+                            pip=pip, download_cache=pip_cache_dir,
+                            find_links=wheelhouse, wheel_dir=wheelhouse,
+                            requirements_file=reqfn))
+                    out = self.run_command(
+                        pip_format % dict(
+                            pip=pip, extra_args="",
+                            download_cache=pip_cache_dir, build_dir=build,
+                            find_links=wheelhouse, requirements_file=reqfn))
                     if "\nSuccessfully installed " not in out:
                         sys.stderr.write("Installing pip requires for %s:%s "
                                          "failed.\n%s\n" %
@@ -256,13 +291,20 @@ class Mirror(object):
                         for r in requires:
                             reqfd.write(r + "\n")
                         reqfd.close()
-                        out = self.run_command(venv_format %
-                                               (pip_cache_dir, venv))
+                        out = self.run_command(venv_format % dict(
+                            extra_search_dir=pip_cache_dir, venv_dir=venv))
                         if os.path.exists(build):
                             shutil.rmtree(build)
-                        out = self.run_command(pip_format %
-                                               (pip, "--no-install",
-                                                pip_cache_dir, build, reqs))
+                        out = self.run_command(
+                            wheel_file_format % dict(
+                                pip=pip, download_cache=pip_cache_dir,
+                                find_links=wheelhouse, wheel_dir=wheelhouse,
+                                requirements_file=reqs))
+                        out = self.run_command(
+                            pip_format % dict(
+                                pip=pip, extra_args="--no-install",
+                                download_cache=pip_cache_dir, build_dir=build,
+                                find_links=wheelhouse, requirements_file=reqs))
                         if "\nSuccessfully downloaded " not in out:
                             sys.stderr.write("Downloading pip requires for "
                                              "%s:%s failed.\n%s\n" %
@@ -273,22 +315,26 @@ class Mirror(object):
                     print("no requirements")
         shutil.rmtree(workdir)
 
+    def _get_distro(self):
+        out = self.run_command('lsb_release -i -r -s')
+        return out.strip().replace('\n', '-')
+
     def process_cache(self, mirror):
         if self.args.noop:
             return
 
+        self._write_tarball_mirror(mirror)
+        self._write_wheel_mirror(mirror)
+
+    def _write_tarball_mirror(self, mirror):
         pip_cache_dir = os.path.join(self.config['cache-root'],
                                      'pip', mirror['name'])
         destination_mirror = mirror['output']
 
         PACKAGE_VERSION_RE = re.compile(r'(.*)-[0-9]')
-        full_html_line = "<a href='{dir}/{name}'>{name}</a><br />\n"
 
         packages = {}
         package_count = 0
-
-        if not os.path.exists(destination_mirror):
-            os.makedirs(destination_mirror)
 
         for filename in os.listdir(pip_cache_dir):
             if filename.endswith('content-type'):
@@ -304,9 +350,32 @@ class Mirror(object):
             package_name = name_match.group(1)
 
             version_list = packages.get(package_name, {})
-            version_list[tarball] = filename
+            version_list[tarball] = os.path.join(pip_cache_dir, filename)
             packages[package_name] = version_list
             package_count = package_count + 1
+        self._write_mirror(destination_mirror, packages, package_count)
+
+    def _write_wheel_mirror(self, mirror):
+
+        distro = self._get_distro()
+        wheelhouse = os.path.join(self.config['cache-root'], "wheelhouse")
+        wheel_destination_mirror = os.path.join(mirror['output'], distro)
+        packages = {}
+        package_count = 0
+
+        for filename in os.listdir(wheelhouse):
+            package_name = filename.split('-')[0].replace('_', '-')
+            version_list = packages.get(package_name, {})
+            version_list[filename] = os.path.join(wheelhouse, filename)
+            packages[package_name] = version_list
+            package_count = package_count + 1
+        self._write_mirror(wheel_destination_mirror, packages, package_count)
+
+    def _write_mirror(self, destination_mirror, packages, package_count):
+        full_html_line = "<a href='{dir}/{name}'>{name}</a><br />\n"
+
+        if not os.path.exists(destination_mirror):
+            os.makedirs(destination_mirror)
 
         full_html = open(os.path.join(destination_mirror, ".full.html"), 'w')
         simple_html = open(os.path.join(destination_mirror, ".index.html"),
@@ -330,8 +399,7 @@ class Mirror(object):
                 index.write("""<html><head>
           <title>%s &ndash; PyPI Mirror</title>
         </head><body>\n""" % package_name)
-                for tarball, filename in versions.items():
-                    source_path = os.path.join(pip_cache_dir, filename)
+                for tarball, source_path in versions.items():
                     destination_path = os.path.join(destination_dir,
                                                     tarball)
                     dot_destination_path = os.path.join(destination_dir,
