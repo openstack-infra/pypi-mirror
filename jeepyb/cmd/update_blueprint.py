@@ -71,16 +71,8 @@ def short_project(full_project_name):
 def git2lp(full_project_name):
     """Convert Git repo name to Launchpad project."""
     project_map = {
-        'stackforge/puppet-ceilometer': 'puppet-openstack',
-        'stackforge/puppet-cinder': 'puppet-openstack',
-        'stackforge/puppet-glance': 'puppet-openstack',
-        'stackforge/puppet-horizon': 'puppet-openstack',
-        'stackforge/puppet-keystone': 'puppet-openstack',
-        'stackforge/puppet-nova': 'puppet-openstack',
         'stackforge/puppet-openstack_dev_env': 'puppet-openstack',
-        'stackforge/puppet-quantum': 'puppet-openstack',
-        'stackforge/puppet-swift': 'puppet-openstack',
-        'stackforge/puppet-tempest': 'puppet-openstack',
+        'stackforge/puppet-quantum': 'puppet-neutron',
     }
     return project_map.get(full_project_name, short_project(full_project_name))
 
