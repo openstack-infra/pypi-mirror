@@ -201,11 +201,11 @@ class Mirror(object):
             if short_project.endswith('.git'):
                 short_project = short_project[:-4]
             if not os.path.isdir(short_project):
-                out = self.run_command("git clone %s %s" %
-                                       (project, short_project))
+                self.run_command(
+                    "git clone %s %s" % (project, short_project))
             self.chdir(os.path.join(project_cache_dir,
                                     short_project))
-            out = self.run_command("git fetch -p origin")
+            self.run_command("git fetch -p origin")
 
             if self.args.branch:
                 branches = [self.args.branch]
@@ -219,8 +219,8 @@ class Mirror(object):
                 print("Fetching pip requires for %s:%s" %
                       (project, branch))
                 if not self.args.no_update:
-                    out = self.run_command("git reset --hard %s" % branch)
-                    out = self.run_command("git clean -x -f -d -q")
+                    self.run_command("git reset --hard %s" % branch)
+                    self.run_command("git clean -x -f -d -q")
                 reqlist = []
                 if os.path.exists('global-requirements.txt'):
                     reqlist.append('global-requirements.txt')
@@ -232,7 +232,7 @@ class Mirror(object):
                         if os.path.exists(requires_file):
                             reqlist.append(requires_file)
                 if reqlist:
-                    out = self.run_command(
+                    self.run_command(
                         venv_format % dict(
                             extra_search_dir=pip_cache_dir, venv_dir=venv))
                     # Need to do these separately. If you attempt to upgrade
@@ -265,7 +265,7 @@ class Mirror(object):
                     (reqfp, reqfn) = tempfile.mkstemp()
                     os.write(reqfp, '\n'.join(new_reqs))
                     os.close(reqfp)
-                    out = self.run_command(
+                    self.run_command(
                         wheel_file_format % dict(
                             pip=pip, download_cache=pip_cache_dir,
                             find_links=wheelhouse, wheel_dir=wheelhouse,
@@ -291,11 +291,11 @@ class Mirror(object):
                         for r in requires:
                             reqfd.write(r + "\n")
                         reqfd.close()
-                        out = self.run_command(venv_format % dict(
+                        self.run_command(venv_format % dict(
                             extra_search_dir=pip_cache_dir, venv_dir=venv))
                         if os.path.exists(build):
                             shutil.rmtree(build)
-                        out = self.run_command(
+                        self.run_command(
                             wheel_file_format % dict(
                                 pip=pip, download_cache=pip_cache_dir,
                                 find_links=wheelhouse, wheel_dir=wheelhouse,
