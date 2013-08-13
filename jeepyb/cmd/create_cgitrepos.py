@@ -21,6 +21,7 @@
 # organization (openstack, stackforge, etc)
 
 import os
+import subprocess
 import yaml
 
 
@@ -50,14 +51,17 @@ def main():
         for org in sorted(gitorgs):
             cgit_file.write('\n')
             cgit_file.write('section=%s\n' % (org))
+            org_dir = os.path.join(REPO_PATH, org)
             projects = gitorgs[org]
             projects.sort()
             for (name, description) in projects:
+                project_repo = "%s.git" % os.path.join(org_dir, name)
                 cgit_file.write('\n')
                 cgit_file.write('repo.url=%s/%s\n' % (org, name))
-                cgit_file.write('repo.path=%s/%s/%s.git/\n' % (REPO_PATH,
-                                                               org, name))
+                cgit_file.write('repo.path=%s/\n' % (project_repo))
                 cgit_file.write('repo.desc=%s\n' % (description))
+                if not os.path.exists(project_repo):
+                    subprocess.call(['git', 'init', '--bare', project_repo])
 
 
 if __name__ == "__main__":
