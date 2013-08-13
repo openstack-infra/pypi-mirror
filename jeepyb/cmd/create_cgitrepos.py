@@ -31,6 +31,8 @@ CGIT_REPOS = os.environ.get('CGIT_REPOS',
                             '/etc/cgitrepos')
 REPO_PATH = os.environ.get('REPO_PATH',
                            '/var/lib/git')
+CGIT_USER = os.environ.get('CGIT_USER', 'cgit')
+CGIT_GROUP = os.environ.get('CGIT_GROUP', 'cgit')
 
 
 def main():
@@ -62,6 +64,8 @@ def main():
                 cgit_file.write('repo.desc=%s\n' % (description))
                 if not os.path.exists(project_repo):
                     subprocess.call(['git', 'init', '--bare', project_repo])
+                    subprocess.call(['chown', '-R', '%s:%s'
+                                     % (CGIT_USER, CGIT_GROUP), project_repo])
 
 
 if __name__ == "__main__":
