@@ -245,13 +245,15 @@ class Mirror(object):
                     # the setuptools upgrade issues, so upgrading that first
                     # is a good idea
                     for requirement in [
-                            "pip", "setuptools", "wheel", "virtualenv"]:
+                            "pip", "setuptools", "distribute",
+                            "wheel", "virtualenv"]:
                         self.run_command(
                             upgrade_format % dict(
                                 pip=pip, download_cache=pip_cache_dir,
                                 build_dir=build, find_links=wheelhouse,
                                 requirement=requirement))
-                    for requirement in ["pip", "setuptools", "virtualenv"]:
+                    for requirement in [
+                            "pip", "setuptools", "distribute", "virtualenv"]:
                         self.run_command(
                             wheel_format % dict(
                                 pip=pip, download_cache=pip_cache_dir,
@@ -293,6 +295,23 @@ class Mirror(object):
                         reqfd.close()
                         self.run_command(venv_format % dict(
                             extra_search_dir=pip_cache_dir, venv_dir=venv))
+                        for requirement in [
+                                "pip", "setuptools", "distribute",
+                                "wheel", "virtualenv"]:
+                            self.run_command(
+                                upgrade_format % dict(
+                                    pip=pip, download_cache=pip_cache_dir,
+                                    build_dir=build, find_links=wheelhouse,
+                                    requirement=requirement))
+                        for requirement in [
+                                "pip", "setuptools", "distribute",
+                                "virtualenv"]:
+                            self.run_command(
+                                wheel_format % dict(
+                                    pip=pip, download_cache=pip_cache_dir,
+                                    find_links=wheelhouse,
+                                    wheel_dir=wheelhouse,
+                                    requirement=requirement))
                         if os.path.exists(build):
                             shutil.rmtree(build)
                         self.run_command(
