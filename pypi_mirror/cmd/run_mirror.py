@@ -235,18 +235,8 @@ class Mirror(object):
                     self.run_command(
                         venv_format % dict(
                             extra_search_dir=pip_cache_dir, venv_dir=venv))
-                    # Need to do these separately. If you attempt to upgrade
-                    # setuptools with something else, you can get into a
-                    # situation where distribute has been upgraded, but pip
-                    # attemps to install something else before installing
-                    # the setuptools replacement. The safest thing is to
-                    # simply upgrade setuptools by itself.
-                    # There is a current theory that pip 1.4 may solve
-                    # the setuptools upgrade issues, so upgrading that first
-                    # is a good idea
                     for requirement in [
-                            "pip", "setuptools", "distribute",
-                            "wheel", "virtualenv"]:
+                            "pip", "wheel", "virtualenv"]:
                         self.run_command(
                             upgrade_format % dict(
                                 pip=pip, download_cache=pip_cache_dir,
@@ -296,21 +286,11 @@ class Mirror(object):
                         self.run_command(venv_format % dict(
                             extra_search_dir=pip_cache_dir, venv_dir=venv))
                         for requirement in [
-                                "pip", "setuptools", "distribute",
-                                "wheel", "virtualenv"]:
+                                "pip", "wheel"]:
                             self.run_command(
                                 upgrade_format % dict(
                                     pip=pip, download_cache=pip_cache_dir,
                                     build_dir=build, find_links=wheelhouse,
-                                    requirement=requirement))
-                        for requirement in [
-                                "pip", "setuptools", "distribute",
-                                "virtualenv"]:
-                            self.run_command(
-                                wheel_format % dict(
-                                    pip=pip, download_cache=pip_cache_dir,
-                                    find_links=wheelhouse,
-                                    wheel_dir=wheelhouse,
                                     requirement=requirement))
                         if os.path.exists(build):
                             shutil.rmtree(build)
