@@ -316,7 +316,7 @@ class Mirror(object):
 
     def _get_distro(self):
         out = self.run_command('lsb_release -i -r -s')
-        return out.strip().replace('\n', '-')
+        return out.strip().replace('\n', '-').replace(' ', '-')
 
     def process_cache(self, mirror):
         if self.args.noop:
