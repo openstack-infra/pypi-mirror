@@ -1,7 +1,5 @@
-#! /usr/bin/env python
-# Copyright (C) 2011 OpenStack, LLC.
+# Copyright (C) 2011-2013 OpenStack Foundation
 # Copyright (C) 2013 Hewlett-Packard Development Company, L.P.
-# Copyright (C) 2013 OpenStack Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -434,7 +432,3 @@ class Mirror(object):
 def main():
     mb = Mirror()
     mb.run()
-
-
-if __name__ == "__main__":
-    main()
