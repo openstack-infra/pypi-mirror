@@ -159,7 +159,7 @@ class Mirror(object):
     def build_mirror(self, mirror):
         print("Building mirror: %s" % mirror['name'])
         pip_format = (
-            "%(pip)s install -U %(extra_args)s --exists-action=w --use-wheel"
+            "%(pip)s install -U %(extra_args)s --exists-action=w"
             " --download-cache=%(download_cache)s"
             " --build %(build_dir)s -f %(find_links)s"
             " -r %(requirements_file)s")
@@ -167,12 +167,12 @@ class Mirror(object):
             "virtualenv --clear --extra-search-dir=%(extra_search_dir)s"
             " %(venv_dir)s")
         upgrade_format = (
-            "%(pip)s install -U --use-wheel --exists-action=w"
+            "%(pip)s install -U --exists-action=w"
             " --download-cache=%(download_cache)s --build %(build_dir)s"
             " -f %(find_links)s %(requirement)s")
         wheel_file_format = (
             "%(pip)s wheel --download-cache=%(download_cache)s"
-            " --use-wheel --wheel-dir %(wheel_dir)s -f %(find_links)s"
+            " --wheel-dir %(wheel_dir)s -f %(find_links)s"
             " -r %(requirements_file)s")
         wheel_format = (
             "%(pip)s wheel --download-cache=%(download_cache)s"
