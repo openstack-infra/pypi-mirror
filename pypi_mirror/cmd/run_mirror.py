@@ -73,7 +73,7 @@ class Mirror(object):
             description='Build a pypi mirror from requirements')
         parser.add_argument('-b', dest='branch',
                             help='restrict run to a specified branch')
-        parser.add_argument('-c', dest='config',
+        parser.add_argument('-c', dest='config', required=True,
                             help='specify the config file')
         parser.add_argument('-n', dest='noop', action='store_true',
                             help='do not run any commands')
