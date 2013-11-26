@@ -92,6 +92,10 @@ class Mirror(object):
         parser.add_argument('--no-update', dest='no_update',
                             action='store_true',
                             help='do not update any git repos')
+        parser.add_argument('--export', dest='export_file',
+                            default=None,
+                            help='export installed package list to a file '
+                            '(must be absolute path)')
         self.args = parser.parse_args()
         self.config = yaml.load(open(self.args.config))
 
@@ -310,6 +314,13 @@ class Mirror(object):
                                              (project, branch, out))
                             print("pip install did not indicate success")
                         print("cached:\n%s" % freeze)
+                        # save the list of installed packages to a file
+                        if self.args.export_file:
+                            print("Export installed package list to " +
+                                  self.args.export_file)
+                            with open(self.args.export_file, "w") \
+                                    as package_list_file:
+                                package_list_file.write(freeze)
                 else:
                     print("no requirements")
         shutil.rmtree(workdir)
