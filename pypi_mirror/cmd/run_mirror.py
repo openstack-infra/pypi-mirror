@@ -235,8 +235,7 @@ class Mirror(object):
                 if (not branch.startswith("remotes/origin")
                         or "origin/HEAD" in branch):
                     continue
-                print("Fetching pip requires for %s:%s" %
-                      (project, branch))
+                print("Fetching pip requires for %s:%s" % (project, branch))
                 if not self.args.no_update:
                     self.run_command("git reset --hard %s" % branch)
                     self.run_command("git clean -x -f -d -q")
@@ -250,94 +249,93 @@ class Mirror(object):
                                           "tools/test-requires"):
                         if os.path.exists(requires_file):
                             reqlist.append(requires_file)
-                if reqlist:
+                if not reqlist:
+                    print("no requirements")
+                    continue
+
+                self.run_command(
+                    venv_format % dict(
+                        extra_search_dir=pip_cache_dir, venv_dir=venv))
+                for requirement in ["pip", "wheel", "virtualenv"]:
                     self.run_command(
-                        venv_format % dict(
-                            extra_search_dir=pip_cache_dir, venv_dir=venv))
-                    for requirement in [
-                            "pip", "wheel", "virtualenv"]:
-                        self.run_command(
-                            upgrade_format % dict(
-                                pip=pip, download_cache=pip_cache_dir,
-                                build_dir=build, find_links=wheelhouse,
-                                requirement=requirement))
-                    for requirement in [
-                            "pip", "setuptools", "distribute", "virtualenv"]:
-                        self.run_command(
-                            wheel_format % dict(
-                                pip=pip, download_cache=pip_cache_dir,
-                                find_links=wheelhouse, wheel_dir=wheelhouse,
-                                requirement=requirement))
-                    if os.path.exists(build):
-                        shutil.rmtree(build)
-                    new_reqs = self.process_http_requirements(reqlist,
-                                                              pip_cache_dir,
-                                                              pip)
-                    (reqfp, reqfn) = tempfile.mkstemp()
-                    os.write(reqfp, '\n'.join(new_reqs))
-                    os.close(reqfp)
+                        upgrade_format % dict(
+                            pip=pip, download_cache=pip_cache_dir,
+                            build_dir=build, find_links=wheelhouse,
+                            requirement=requirement))
+                for requirement in [
+                        "pip", "setuptools", "distribute", "virtualenv"]:
                     self.run_command(
-                        wheel_file_format % dict(
+                        wheel_format % dict(
                             pip=pip, download_cache=pip_cache_dir,
                             find_links=wheelhouse, wheel_dir=wheelhouse,
-                            requirements_file=reqfn))
-                    out = self.run_command(
-                        pip_format % dict(
-                            pip=pip, extra_args="",
-                            download_cache=pip_cache_dir, build_dir=build,
-                            find_links=wheelhouse, requirements_file=reqfn))
-                    if "\nSuccessfully installed " not in out:
-                        sys.stderr.write("Installing pip requires for %s:%s "
-                                         "failed.\n%s\n" %
-                                         (project, branch, out))
-                        print("pip install did not indicate success")
-                    else:
-                        freeze = self.run_command("%s freeze -l" % pip)
-                        requires = self.find_pkg_info(build)
-                        reqfd = open(reqs, "w")
-                        for line in freeze.split("\n"):
-                            if line.startswith("-e ") or (
-                                    "==" in line and " " not in line):
-                                requires.add(line)
-                        for r in requires:
-                            reqfd.write(r + "\n")
-                        reqfd.close()
-                        self.run_command(venv_format % dict(
-                            extra_search_dir=pip_cache_dir, venv_dir=venv))
-                        for requirement in [
-                                "pip", "wheel"]:
-                            self.run_command(
-                                upgrade_format % dict(
-                                    pip=pip, download_cache=pip_cache_dir,
-                                    build_dir=build, find_links=wheelhouse,
-                                    requirement=requirement))
-                        if os.path.exists(build):
-                            shutil.rmtree(build)
-                        self.run_command(
-                            wheel_file_format % dict(
-                                pip=pip, download_cache=pip_cache_dir,
-                                find_links=wheelhouse, wheel_dir=wheelhouse,
-                                requirements_file=reqs))
-                        out = self.run_command(
-                            pip_format % dict(
-                                pip=pip, extra_args="--no-install",
-                                download_cache=pip_cache_dir, build_dir=build,
-                                find_links=wheelhouse, requirements_file=reqs))
-                        if "\nSuccessfully downloaded " not in out:
-                            sys.stderr.write("Downloading pip requires for "
-                                             "%s:%s failed.\n%s\n" %
-                                             (project, branch, out))
-                            print("pip install did not indicate success")
-                        print("cached:\n%s" % freeze)
-                        # save the list of installed packages to a file
-                        if self.args.export_file:
-                            print("Export installed package list to " +
-                                  self.args.export_file)
-                            with open(self.args.export_file, "w") \
-                                    as package_list_file:
-                                package_list_file.write(freeze)
-                else:
-                    print("no requirements")
+                            requirement=requirement))
+                if os.path.exists(build):
+                    shutil.rmtree(build)
+                new_reqs = self.process_http_requirements(reqlist,
+                                                          pip_cache_dir,
+                                                          pip)
+                (reqfp, reqfn) = tempfile.mkstemp()
+                os.write(reqfp, '\n'.join(new_reqs))
+                os.close(reqfp)
+                self.run_command(
+                    wheel_file_format % dict(
+                        pip=pip, download_cache=pip_cache_dir,
+                        find_links=wheelhouse, wheel_dir=wheelhouse,
+                        requirements_file=reqfn))
+                out = self.run_command(
+                    pip_format % dict(
+                        pip=pip, extra_args="",
+                        download_cache=pip_cache_dir, build_dir=build,
+                        find_links=wheelhouse, requirements_file=reqfn))
+                if "\nSuccessfully installed " not in out:
+                    sys.stderr.write("Installing pip requires for %s:%s "
+                                     "failed.\n%s\n" %
+                                     (project, branch, out))
+                    print("pip install did not indicate success")
+                    continue
+
+                freeze = self.run_command("%s freeze -l" % pip)
+                requires = self.find_pkg_info(build)
+                reqfd = open(reqs, "w")
+                for line in freeze.split("\n"):
+                    if line.startswith("-e ") or (
+                            "==" in line and " " not in line):
+                        requires.add(line)
+                for r in requires:
+                    reqfd.write(r + "\n")
+                reqfd.close()
+                self.run_command(venv_format % dict(
+                    extra_search_dir=pip_cache_dir, venv_dir=venv))
+                for requirement in ["pip", "wheel"]:
+                    self.run_command(
+                        upgrade_format % dict(
+                            pip=pip, download_cache=pip_cache_dir,
+                            build_dir=build, find_links=wheelhouse,
+                            requirement=requirement))
+                if os.path.exists(build):
+                    shutil.rmtree(build)
+                self.run_command(
+                    wheel_file_format % dict(
+                        pip=pip, download_cache=pip_cache_dir,
+                        find_links=wheelhouse, wheel_dir=wheelhouse,
+                        requirements_file=reqs))
+                out = self.run_command(
+                    pip_format % dict(
+                        pip=pip, extra_args="--no-install",
+                        download_cache=pip_cache_dir, build_dir=build,
+                        find_links=wheelhouse, requirements_file=reqs))
+                if "\nSuccessfully downloaded " not in out:
+                    sys.stderr.write("Downloading pip requires for "
+                                     "%s:%s failed.\n%s\n" %
+                                     (project, branch, out))
+                    print("pip install did not indicate success")
+                print("cached:\n%s" % freeze)
+                # save the list of installed packages to a file
+                if self.args.export_file:
+                    print("Export installed package list to " +
+                          self.args.export_file)
+                    with open(self.args.export_file, "w") as package_list_file:
+                        package_list_file.write(freeze)
         shutil.rmtree(workdir)
 
     def _get_distro(self):
