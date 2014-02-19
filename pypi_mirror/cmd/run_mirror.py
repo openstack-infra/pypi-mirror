@@ -168,6 +168,7 @@ class Mirror(object):
             " --allow-external psutil --allow-insecure psutil"
             " --allow-external pysendfile --allow-insecure pysendfile"
             " --allow-external pytidylib --allow-insecure pytidylib"
+            " --no-use-wheel"
             " -r %(requirements_file)s")
         venv_format = (
             "virtualenv --clear --extra-search-dir=%(extra_search_dir)s"
