@@ -52,6 +52,7 @@ from __future__ import print_function
 
 import argparse
 import datetime
+import functools
 import md5
 import os
 import pkginfo
@@ -97,15 +98,23 @@ class Mirror(object):
         self.args = parser.parse_args()
         self.config = yaml.load(open(self.args.config))
 
-    def run_command(self, cmd):
-        cmd_list = shlex.split(str(cmd))
-        self.debug("Run: %s" % cmd)
+    def run_command(self, *cmd_strs, **kwargs):
+        env = kwargs.pop('env', None)
+        if kwargs:
+            badargs = ','.join(kwargs.keys())
+            raise TypeError(
+                "run_command() got unexpected keyword arguments %s" % badargs)
+
+        cmd_list = []
+        for cmd_str in cmd_strs:
+            cmd_list.extend(shlex.split(str(cmd_str)))
+        self.debug("Run: %s" % " ".join(cmd_strs))
         if self.args.noop:
             return ''
         if self.args.no_pip and cmd_list[0].endswith('pip'):
             return ''
         p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT)
+                             stderr=subprocess.STDOUT, env=env)
         (out, nothing) = p.communicate()
         out = out.strip()
         self.debug(out)
@@ -219,17 +228,20 @@ class Mirror(object):
             short_project = project.split('/')[-1]
             if short_project.endswith('.git'):
                 short_project = short_project[:-4]
-            if not os.path.isdir(short_project):
-                self.run_command(
-                    "git clone %s %s" % (project, short_project))
-            self.chdir(os.path.join(project_cache_dir,
-                                    short_project))
-            self.run_command("git fetch -p origin")
+            git_work_tree = os.path.join(project_cache_dir, short_project)
+            if not os.path.isdir(git_work_tree):
+                self.run_command("git clone %s %s" % (project, git_work_tree))
+            self.chdir(git_work_tree)
+            git = functools.partial(self.run_command, "git", env={
+                "GIT_WORK_TREE": git_work_tree,
+                "GIT_DIR": os.path.join(git_work_tree, ".git"),
+            })
+            git("fetch -p origin")
 
             if self.args.branch:
                 branches = [self.args.branch]
             else:
-                branches = self.run_command("git branch -a").split("\n")
+                branches = git("branch -a").split("\n")
             for branch in branches:
                 branch = branch.strip()
                 if (not branch.startswith("remotes/origin")
@@ -237,8 +249,8 @@ class Mirror(object):
                     continue
                 print("Fetching pip requires for %s:%s" % (project, branch))
                 if not self.args.no_update:
-                    self.run_command("git reset --hard %s" % branch)
-                    self.run_command("git clean -x -f -d -q")
+                    git("reset --hard %s" % branch)
+                    git("clean -x -f -d -q")
                 reqlist = []
                 if os.path.exists('global-requirements.txt'):
                     reqlist.append('global-requirements.txt')
