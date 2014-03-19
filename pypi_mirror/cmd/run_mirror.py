@@ -356,8 +356,6 @@ class Mirror(object):
                                      'pip', mirror['name'])
         destination_mirror = mirror['output']
 
-        PACKAGE_VERSION_RE = re.compile(r'(.*)-[0-9]')
-
         packages = {}
         package_count = 0
 
@@ -368,11 +366,9 @@ class Mirror(object):
             realname = urllib.unquote(filename)
             # The ? accounts for sourceforge downloads
             tarball = os.path.basename(realname).split("?")[0]
-            name_match = PACKAGE_VERSION_RE.search(tarball)
-
-            if name_match is None:
+            package_name = os.path.basename(os.path.dirname(realname))
+            if not package_name:
                 continue
-            package_name = name_match.group(1)
 
             version_list = packages.get(package_name, {})
             version_list[tarball] = os.path.join(pip_cache_dir, filename)
