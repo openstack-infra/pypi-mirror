@@ -19,12 +19,12 @@
 #   mirrors:
 #     - name: openstack
 #       projects:
-#         - https://github.com/openstack/requirements
+#         - https://git.openstack.org/openstack/requirements
 #       output: /tmp/mirror/openstack
 #
 #     - name: openstack-infra
 #       projects:
-#         - https://github.com/openstack-infra/config
+#         - https://git.openstack.org/openstack-infra/config
 #       output: /tmp/mirror/openstack-infra
 #
 # The algorithm it attempts to follow is:
