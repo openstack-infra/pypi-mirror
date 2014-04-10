@@ -11,6 +11,14 @@ things you expect to download from PyPI.
 pypi-mirror will build a local static mirror for you based on requirements
 files in git repos.
 
+Use with diskimage-builder
+--------------------------
+
+The config below shows a generic sample config. If you're using this mirror in
+conjunction with diskimage-builder, more specific notes (including some
+pre-requisites and installation instructions) can be found at
+https://git.openstack.org/cgit/openstack/diskimage-builder/tree/elements/pypi/README.md
+
 
 Configuration
 -------------
