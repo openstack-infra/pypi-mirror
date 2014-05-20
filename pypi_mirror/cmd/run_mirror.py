@@ -173,10 +173,6 @@ class Mirror(object):
             "%(pip)s install -U %(extra_args)s --exists-action=w"
             " --download-cache=%(download_cache)s"
             " --build %(build_dir)s -f %(find_links)s"
-            " --allow-external netifaces --allow-insecure netifaces"
-            " --allow-external psutil --allow-insecure psutil"
-            " --allow-external pysendfile --allow-insecure pysendfile"
-            " --allow-external pytidylib --allow-insecure pytidylib"
             " --no-use-wheel"
             " -r %(requirements_file)s")
         venv_format = (
@@ -185,25 +181,13 @@ class Mirror(object):
         upgrade_format = (
             "%(pip)s install -U --exists-action=w"
             " --download-cache=%(download_cache)s --build %(build_dir)s"
-            " --allow-external netifaces --allow-insecure netifaces"
-            " --allow-external psutil --allow-insecure psutil"
-            " --allow-external pysendfile --allow-insecure pysendfile"
-            " --allow-external pytidylib --allow-insecure pytidylib"
             " -f %(find_links)s %(requirement)s")
         wheel_file_format = (
             "%(pip)s wheel --download-cache=%(download_cache)s"
             " --wheel-dir %(wheel_dir)s -f %(find_links)s"
-            " --allow-external netifaces --allow-insecure netifaces"
-            " --allow-external psutil --allow-insecure psutil"
-            " --allow-external pysendfile --allow-insecure pysendfile"
-            " --allow-external pytidylib --allow-insecure pytidylib"
             " -r %(requirements_file)s")
         wheel_format = (
             "%(pip)s wheel --download-cache=%(download_cache)s"
-            " --allow-external netifaces --allow-insecure netifaces"
-            " --allow-external psutil --allow-insecure psutil"
-            " --allow-external pysendfile --allow-insecure pysendfile"
-            " --allow-external pytidylib --allow-insecure pytidylib"
             " -f %(find_links)s --wheel-dir %(wheel_dir)s %(requirement)s")
 
         workdir = tempfile.mkdtemp()
