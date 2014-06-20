@@ -76,6 +76,8 @@ class Mirror(object):
                             help='specify the config file')
         parser.add_argument('-n', dest='noop', action='store_true',
                             help='do not run any commands')
+        parser.add_argument('-r', dest='reqlist', action='append',
+                            help='specify alternative requirements file(s)')
         parser.add_argument('--no-pip', dest='no_pip', action='store_true',
                             help='do not run any pip commands')
         parser.add_argument('--verbose', dest='debug', action='store_true',
@@ -235,16 +237,17 @@ class Mirror(object):
                 if not self.args.no_update:
                     git("reset --hard %s" % branch)
                     git("clean -x -f -d -q")
-                reqlist = []
-                if os.path.exists('global-requirements.txt'):
-                    reqlist.append('global-requirements.txt')
+                if self.args.reqlist:
+                    # Not filtering for existing files - they must all exist.
+                    reqlist = self.args.reqlist
+                elif os.path.exists('global-requirements.txt'):
+                    reqlist = ['global-requirements.txt']
                 else:
-                    for requires_file in ("requirements.txt",
-                                          "test-requirements.txt",
-                                          "tools/pip-requires",
-                                          "tools/test-requires"):
-                        if os.path.exists(requires_file):
-                            reqlist.append(requires_file)
+                    reqlist = [r for r in ["requirements.txt",
+                                           "test-requirements.txt",
+                                           "tools/pip-requires",
+                                           "tools/test-requires"]
+                               if os.path.exists(r)]
                 if not reqlist:
                     print("no requirements")
                     continue
