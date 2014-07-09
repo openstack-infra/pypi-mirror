@@ -256,11 +256,13 @@ class Mirror(object):
                     venv_format % dict(
                         extra_search_dir=pip_cache_dir, venv_dir=venv))
                 for requirement in ["pip", "wheel", "virtualenv"]:
-                    self.run_command(
-                        upgrade_format % dict(
-                            pip=pip, download_cache=pip_cache_dir,
-                            build_dir=build, find_links=wheelhouse,
-                            requirement=requirement))
+                    for extra_args in ("", "--no-use-wheel"):
+                        self.run_command(
+                            upgrade_format % dict(
+                                pip=pip, extra_args=extra_args,
+                                download_cache=pip_cache_dir,
+                                build_dir=build, find_links=wheelhouse,
+                                requirement=requirement))
                 for requirement in [
                         "pip", "setuptools", "distribute", "virtualenv"]:
                     self.run_command(
@@ -306,11 +308,13 @@ class Mirror(object):
                 self.run_command(venv_format % dict(
                     extra_search_dir=pip_cache_dir, venv_dir=venv))
                 for requirement in ["pip", "wheel"]:
-                    self.run_command(
-                        upgrade_format % dict(
-                            pip=pip, download_cache=pip_cache_dir,
-                            build_dir=build, find_links=wheelhouse,
-                            requirement=requirement))
+                    for extra_args in ("", "--no-use-wheel"):
+                        self.run_command(
+                            upgrade_format % dict(
+                                pip=pip, extra_args=extra_args,
+                                download_cache=pip_cache_dir, build_dir=build,
+                                find_links=wheelhouse,
+                                requirement=requirement))
                 if os.path.exists(build):
                     shutil.rmtree(build)
                 self.run_command(
