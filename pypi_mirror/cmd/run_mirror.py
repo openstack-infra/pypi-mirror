@@ -53,7 +53,7 @@ from __future__ import print_function
 import argparse
 import datetime
 import functools
-import md5
+import hashlib
 import os
 import pkginfo
 import re
@@ -424,7 +424,7 @@ class Mirror(object):
                                                         '.' + tarball)
                     with open(dot_destination_path, 'w') as dest:
                         src = open(source_path, 'r').read()
-                        md5sum = md5.md5(src).hexdigest()
+                        md5sum = hashlib.md5(src).hexdigest()
                         dest.write(src)
 
                         safe_name = urllib.quote(tarball)
