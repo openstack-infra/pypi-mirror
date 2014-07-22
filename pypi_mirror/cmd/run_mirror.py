@@ -55,7 +55,6 @@ import datetime
 import functools
 import hashlib
 import os
-import pkginfo
 import re
 import shlex
 import shutil
@@ -63,6 +62,8 @@ import subprocess
 import sys
 import tempfile
 import urllib
+
+import pkginfo
 import yaml
 
 
