@@ -8,5 +8,5 @@ the workflow documented at [http://wiki.openstack.org/GerritWorkflow](http://wik
 
 Pull requests submitted through GitHub will be ignored.
 
-Bugs should be filed [on Launchpad](https://bugs.launchpad.net/openstack-ci),
+Bugs should be filed [on StoryBoard](https://storyboard.openstack.org/#!/project/741),
 not in GitHub's issue tracker.
