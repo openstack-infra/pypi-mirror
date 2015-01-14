@@ -256,7 +256,7 @@ class Mirror(object):
                 self.run_command(
                     venv_format % dict(
                         extra_search_dir=pip_cache_dir, venv_dir=venv))
-                for requirement in ["pip", "wheel", "virtualenv"]:
+                for requirement in ["pip==1.5.6", "wheel", "virtualenv"]:
                     for extra_args in ("", "--no-use-wheel"):
                         self.run_command(
                             upgrade_format % dict(
