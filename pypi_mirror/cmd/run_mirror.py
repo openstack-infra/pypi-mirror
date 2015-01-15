@@ -174,23 +174,21 @@ class Mirror(object):
         print("Building mirror: %s" % mirror['name'])
         pip_format = (
             "%(pip)s install -U %(extra_args)s --exists-action=w"
-            " --download-cache=%(download_cache)s"
+            " --download %(download_cache)s"
             " --build %(build_dir)s -f %(find_links)s"
             " --no-use-wheel"
             " -r %(requirements_file)s")
         venv_format = (
-            "virtualenv --clear --extra-search-dir=%(extra_search_dir)s"
-            " %(venv_dir)s")
+            "virtualenv --clear %(venv_dir)s")
         upgrade_format = (
             "%(pip)s install -U --exists-action=w"
-            " --download-cache=%(download_cache)s --build %(build_dir)s"
             " -f %(find_links)s %(requirement)s")
         wheel_file_format = (
-            "%(pip)s wheel --download-cache=%(download_cache)s"
+            "%(pip)s wheel --download %(download_cache)s"
             " --wheel-dir %(wheel_dir)s -f %(find_links)s"
             " -r %(requirements_file)s")
         wheel_format = (
-            "%(pip)s wheel --download-cache=%(download_cache)s"
+            "%(pip)s wheel --download %(download_cache)s"
             " -f %(find_links)s --wheel-dir %(wheel_dir)s %(requirement)s")
 
         workdir = tempfile.mkdtemp()
@@ -256,7 +254,7 @@ class Mirror(object):
                 self.run_command(
                     venv_format % dict(
                         extra_search_dir=pip_cache_dir, venv_dir=venv))
-                for requirement in ["pip==1.5.6", "wheel", "virtualenv"]:
+                for requirement in ['"pip>=6.0"', "wheel", "virtualenv"]:
                     for extra_args in ("", "--no-use-wheel"):
                         self.run_command(
                             upgrade_format % dict(
@@ -265,7 +263,8 @@ class Mirror(object):
                                 build_dir=build, find_links=wheelhouse,
                                 requirement=requirement))
                 for requirement in [
-                        "pip", "setuptools", "distribute", "virtualenv"]:
+                        '"pip>=6.0"', "setuptools", "distribute",
+                        "virtualenv"]:
                     self.run_command(
                         wheel_format % dict(
                             pip=pip, download_cache=pip_cache_dir,
@@ -354,6 +353,8 @@ class Mirror(object):
         self._write_wheel_mirror(mirror)
 
     def _write_tarball_mirror(self, mirror):
+        # pattern to match the package name followed by version and extension
+        tarball_pattern = re.compile('(.*)-[0-9\.]+.*?\.[a-zA-Z].*')
         pip_cache_dir = os.path.join(self.config['cache-root'],
                                      'pip', mirror['name'])
         destination_mirror = mirror['output']
@@ -368,10 +369,10 @@ class Mirror(object):
             realname = urllib.unquote(filename)
             # The ? accounts for sourceforge downloads
             tarball = os.path.basename(realname).split("?")[0]
-            package_name = os.path.basename(os.path.dirname(realname))
-            if not package_name:
+            match = tarball_pattern.match(tarball)
+            if not match:
                 continue
-
+            package_name = match.groups()[0]
             version_list = packages.get(package_name, {})
             version_list[tarball] = os.path.join(pip_cache_dir, filename)
             packages[package_name] = version_list
