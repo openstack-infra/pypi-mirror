@@ -201,7 +201,10 @@ class Mirror(object):
                                          'projects')
         pip_cache_dir = os.path.join(self.config['cache-root'],
                                      'pip', mirror['name'])
-        wheelhouse = os.path.join(self.config['cache-root'], "wheelhouse")
+        # wheelhouses should be mirror specific, too
+        # or versions might leak across mirrors
+        wheelhouse = os.path.join(self.config['cache-root'], "wheelhouse",
+                                  mirror['name'])
         if not self.args.noop:
             for new_dir in (project_cache_dir, pip_cache_dir, wheelhouse):
                 if not os.path.exists(new_dir):
@@ -349,19 +352,23 @@ class Mirror(object):
         if self.args.noop:
             return
 
-        self._write_tarball_mirror(mirror)
+        self._write_main_mirror(mirror)
         self._write_wheel_mirror(mirror)
 
-    def _write_tarball_mirror(self, mirror):
+    def _write_main_mirror(self, mirror):
+        """Writes mirror for tarballs and non arch-specific wheels."""
         # pattern to match the package name followed by version and extension
         tarball_pattern = re.compile('(.*)-[0-9\.]+.*?\.[a-zA-Z].*')
         pip_cache_dir = os.path.join(self.config['cache-root'],
                                      'pip', mirror['name'])
         destination_mirror = mirror['output']
+        wheelhouse = os.path.join(self.config['cache-root'], "wheelhouse",
+                                  mirror['name'])
 
         packages = {}
         package_count = 0
 
+        # tarballs
         for filename in os.listdir(pip_cache_dir):
             if filename.endswith('content-type'):
                 continue
@@ -377,12 +384,23 @@ class Mirror(object):
             version_list[tarball] = os.path.join(pip_cache_dir, filename)
             packages[package_name] = version_list
             package_count = package_count + 1
+
+        # wheels that don't require a specific arch
+        for filename in [
+                f for f in os.listdir(wheelhouse) if f.endswith('-any.whl')]:
+            package_name = filename.split('-')[0].replace('_', '-')
+            version_list = packages.get(package_name, {})
+            version_list[filename] = os.path.join(wheelhouse, filename)
+            packages[package_name] = version_list
+            package_count = package_count + 1
+
         self._write_mirror(destination_mirror, packages, package_count)
 
     def _write_wheel_mirror(self, mirror):
 
         distro = self._get_distro()
-        wheelhouse = os.path.join(self.config['cache-root'], "wheelhouse")
+        wheelhouse = os.path.join(self.config['cache-root'], "wheelhouse",
+                                  mirror['name'])
         wheel_destination_mirror = os.path.join(mirror['output'], distro)
         packages = {}
         package_count = 0
