@@ -233,7 +233,7 @@ class Mirror(object):
             for branch in branches:
                 branch = branch.strip()
                 if (not branch.startswith("remotes/origin")
-                        or "origin/HEAD" in branch):
+                        or "origin/HEAD" in branch) and len(branches) > 1:
                     continue
                 print("Fetching pip requires for %s:%s" % (project, branch))
                 if not self.args.no_update:
