@@ -257,7 +257,11 @@ class Mirror(object):
                 self.run_command(
                     venv_format % dict(
                         extra_search_dir=pip_cache_dir, venv_dir=venv))
-                for requirement in ['"pip>=6.0"', "wheel", "virtualenv"]:
+                build_tools = [
+                    "pip", "wheel", "virtualenv", "setuptools", "pbr",
+                    "distribute"]
+
+                for requirement in build_tools:
                     for extra_args in ("", "--no-use-wheel"):
                         self.run_command(
                             upgrade_format % dict(
@@ -265,14 +269,14 @@ class Mirror(object):
                                 download_cache=pip_cache_dir,
                                 build_dir=build, find_links=wheelhouse,
                                 requirement=requirement))
-                for requirement in [
-                        '"pip>=6.0"', "setuptools", "distribute",
-                        "virtualenv"]:
+
+                for requirement in build_tools:
                     self.run_command(
                         wheel_format % dict(
                             pip=pip, download_cache=pip_cache_dir,
                             find_links=wheelhouse, wheel_dir=wheelhouse,
                             requirement=requirement))
+
                 if os.path.exists(build):
                     shutil.rmtree(build)
                 new_reqs = self.process_http_requirements(reqlist,
@@ -290,7 +294,7 @@ class Mirror(object):
                     pip_format % dict(
                         pip=pip, extra_args="",
                         download_cache=pip_cache_dir, build_dir=build,
-                        find_links=wheelhouse, requirements_file=reqfn))
+                        find_links=pip_cache_dir, requirements_file=reqfn))
                 if "\nSuccessfully installed " not in out:
                     sys.stderr.write("Installing pip requires for %s:%s "
                                      "failed.\n%s\n" %
@@ -329,7 +333,7 @@ class Mirror(object):
                     pip_format % dict(
                         pip=pip, extra_args="--no-install",
                         download_cache=pip_cache_dir, build_dir=build,
-                        find_links=wheelhouse, requirements_file=reqs))
+                        find_links=pip_cache_dir, requirements_file=reqs))
                 if "\nSuccessfully downloaded " not in out:
                     sys.stderr.write("Downloading pip requires for "
                                      "%s:%s failed.\n%s\n" %
