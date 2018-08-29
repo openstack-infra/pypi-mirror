@@ -1,3 +1,0 @@
-PyYAML>=3.1.0
-pkginfo
-virtualenv>=1.10.1

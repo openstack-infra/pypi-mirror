@@ -1,9 +1,0 @@
-.tox
-build/*
-*.pyc
-jeepyb/versioninfo
-AUTHORS
-ChangeLog
-dist/*
-*.egg*
-.idea

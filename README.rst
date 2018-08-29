@@ -1,49 +1,10 @@
-====================
-Partial PyPI Mirrors
-====================
+This project is no longer maintained.
 
-Sometimes you want a PyPI mirror, but you don't want the whole thing. You
-certainly don't want external links. What you want are the things that you
-need and nothing more. What's more, you often know exactly what you need
-because you already have a pip requirements.txt file containing the list of
-things you expect to download from PyPI.
+The contents of this repository are still available in the Git
+source code management system.  To see the contents of this
+repository before it reached its end of life, please check out the
+previous commit with "git checkout HEAD^1".
 
-pypi-mirror will build a local static mirror for you based on requirements
-files in git repos.
-
-Use with diskimage-builder
---------------------------
-
-The config below shows a generic sample config. If you're using this mirror in
-conjunction with diskimage-builder, more specific notes (including some
-pre-requisites and installation instructions) can be found at
-https://git.openstack.org/cgit/openstack/diskimage-builder/tree/elements/pypi/README.md
-
-
-Configuration
--------------
-
-A YAML configuration is needed to create a mirror. Below is an example
-configuration. ::
-
-  cache-root: /tmp/cache
-
-  mirrors:
-    - name: openstack
-      projects:
-        - https://git.openstack.org/openstack/requirements
-      output: /tmp/mirror/openstack
-
-    - name: openstack-infra
-      projects:
-        - https://git.openstack.org/openstack-infra/config
-      output: /tmp/mirror/openstack-infra
-
-
-Creating a mirror
------------------
-
-The run_mirror utility creates a mirror. ::
-
-  run-mirror -c mirror.yaml
-
+For any further questions, please email
+openstack-dev@lists.openstack.org or join #openstack-dev on
+Freenode.
